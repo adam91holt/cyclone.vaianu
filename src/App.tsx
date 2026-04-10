@@ -7,6 +7,7 @@ import {
   History,
   Terminal,
   CloudSun,
+  Video,
 } from 'lucide-react'
 import { AlertBar } from '@/components/AlertBar'
 import { Header } from '@/components/Header'
@@ -28,8 +29,9 @@ import { NiwaForecast } from '@/components/NiwaForecast'
 import { NiwaTweets } from '@/components/NiwaTweets'
 import { StuffLiveblog } from '@/components/StuffLiveblog'
 import { FeedHealth } from '@/components/FeedHealth'
+import { WebcamsPanel } from '@/components/WebcamsPanel'
 
-type TabKey = 'dashboard' | 'weather' | 'niwa' | 'flights' | 'news' | 'archive' | 'api'
+type TabKey = 'dashboard' | 'weather' | 'webcams' | 'niwa' | 'flights' | 'news' | 'archive' | 'api'
 
 interface TabDef {
   key: TabKey
@@ -41,6 +43,7 @@ interface TabDef {
 const TABS: TabDef[] = [
   { key: 'dashboard', label: 'Live Map', icon: LayoutDashboard, sub: 'Windy + regions' },
   { key: 'weather', label: 'Warnings', icon: CloudRain, sub: 'MetService + Open-Meteo' },
+  { key: 'webcams', label: 'Webcams', icon: Video, sub: 'Live landfall zone' },
   { key: 'niwa', label: 'NIWA', icon: CloudSun, sub: '8-day + @NiwaWeather' },
   { key: 'flights', label: 'Flights', icon: Plane, sub: 'Live ADS-B' },
   { key: 'news', label: 'News', icon: Newspaper, sub: 'RNZ · Stuff · NZH' },
@@ -142,6 +145,8 @@ function App() {
                 <WeatherCharts />
               </>
             )}
+
+            {tab === 'webcams' && <WebcamsPanel />}
 
             {tab === 'niwa' && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
