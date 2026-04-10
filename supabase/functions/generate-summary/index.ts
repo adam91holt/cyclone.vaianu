@@ -75,13 +75,70 @@ async function fetchRegionalWeather(): Promise<RegionSnapshot[]> {
   })
 }
 
-async function fetchRecentNews(): Promise<Array<{ source: string; title: string }>> {
+async function fetchRecentNews(): Promise<
+  Array<{ source: string; title: string; summary: string | null; published_at: string | null }>
+> {
   const { data } = await supabase
     .from('news_items')
-    .select('source, title')
+    .select('source, title, summary, published_at')
     .order('published_at', { ascending: false, nullsFirst: false })
+    .limit(20)
+  return data ?? []
+}
+
+async function fetchMetServiceWarnings(): Promise<
+  Array<{
+    warn_level: string | null
+    event_type: string | null
+    display_regions: string[] | null
+    threat_start_time: string | null
+    threat_end_time: string | null
+    situation_headline: string | null
+    situation_statement: string | null
+    impact: string | null
+  }>
+> {
+  const { data } = await supabase
+    .from('metservice_warnings_national')
+    .select(
+      'warn_level, event_type, display_regions, threat_start_time, threat_end_time, situation_headline, situation_statement, impact',
+    )
+    .eq('is_active', true)
+    .order('threat_start_time', { ascending: true, nullsFirst: false })
     .limit(10)
   return data ?? []
+}
+
+async function fetchLiveblog(): Promise<
+  Array<{ headline: string | null; body: string | null; published_at: string | null }>
+> {
+  const { data } = await supabase
+    .from('stuff_liveblog_posts')
+    .select('headline, body, published_at')
+    .order('published_at', { ascending: false, nullsFirst: false })
+    .limit(8)
+  return data ?? []
+}
+
+async function fetchNiwaForecast(): Promise<
+  Array<{ date: string; forecast: string; wind: string | null; issued: string | null }>
+> {
+  const { data } = await supabase
+    .from('niwa_forecast')
+    .select('*')
+    .order('updated_at', { ascending: false, nullsFirst: false })
+    .limit(1)
+  if (!data || data.length === 0) return []
+  // Extract first few forecast days from the jsonb blob
+  const row = data[0] as { forecast?: unknown; updated_at?: string }
+  const fc = row.forecast
+  if (!Array.isArray(fc)) return []
+  return (fc as Array<Record<string, unknown>>).slice(0, 4).map((d) => ({
+    date: String(d.date ?? d.day ?? ''),
+    forecast: String(d.forecast ?? d.summary ?? d.description ?? ''),
+    wind: d.wind ? String(d.wind) : null,
+    issued: row.updated_at ?? null,
+  }))
 }
 
 interface Ratings {
@@ -93,12 +150,20 @@ interface Ratings {
   rationale: string
 }
 
+interface LandfallEstimate {
+  landfall_iso: string
+  confidence: 'low' | 'medium' | 'high'
+  region: string
+  rationale: string
+}
+
 interface SummaryShape {
   headline: string
   summary: string
   severity: 'red' | 'orange' | 'yellow' | 'advisory'
   key_points: string[]
   ratings: Ratings
+  landfall: LandfallEstimate
 }
 
 const MODEL = 'claude-sonnet-4-6'
@@ -115,40 +180,114 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const regional = await fetchRegionalWeather()
-    const recentNews = await fetchRecentNews()
+    const [regional, recentNews, warnings, liveblog, niwa] = await Promise.all([
+      fetchRegionalWeather(),
+      fetchRecentNews(),
+      fetchMetServiceWarnings(),
+      fetchLiveblog(),
+      fetchNiwaForecast(),
+    ])
 
     const nowNzt = new Date().toLocaleString('en-NZ', {
       timeZone: 'Pacific/Auckland',
       dateStyle: 'full',
       timeStyle: 'short',
     })
+    const nowIso = new Date().toISOString()
 
-    const prompt = `You are a concise, factual weather briefing writer for a public emergency dashboard covering Cyclone Vaianu.
+    const newsBlock =
+      recentNews
+        .map((n) => {
+          const when = n.published_at
+            ? new Date(n.published_at).toLocaleString('en-NZ', {
+                timeZone: 'Pacific/Auckland',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : 'recent'
+          const snippet = n.summary ? ` — ${n.summary.slice(0, 200)}` : ''
+          return `- [${n.source} · ${when}] ${n.title}${snippet}`
+        })
+        .join('\n') || '(no recent items)'
 
-Cyclone Vaianu is a Category 2 sub-tropical cyclone approaching the northeast coast of New Zealand. Landfall is forecast between Auckland and Coromandel at around 06:00 NZST on Sunday 12 April 2026.
+    const warningsBlock =
+      warnings
+        .map((w) => {
+          const period =
+            w.threat_start_time && w.threat_end_time
+              ? `${new Date(w.threat_start_time).toLocaleString('en-NZ', { timeZone: 'Pacific/Auckland', weekday: 'short', hour: '2-digit', minute: '2-digit' })} → ${new Date(w.threat_end_time).toLocaleString('en-NZ', { timeZone: 'Pacific/Auckland', weekday: 'short', hour: '2-digit', minute: '2-digit' })}`
+              : 'ongoing'
+          const regions = (w.display_regions ?? []).join(', ') || '—'
+          const stmt = (w.situation_statement ?? '').slice(0, 400)
+          return `- [${w.warn_level?.toUpperCase() ?? '—'} · ${w.event_type ?? '—'}] ${regions} (${period})${stmt ? `\n  ${stmt}` : ''}`
+        })
+        .join('\n') || '(no active warnings)'
 
-Current time: ${nowNzt}
+    const liveblogBlock =
+      liveblog
+        .map((p) => {
+          const when = p.published_at
+            ? new Date(p.published_at).toLocaleString('en-NZ', {
+                timeZone: 'Pacific/Auckland',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : 'recent'
+          const body = (p.body ?? '').slice(0, 300)
+          return `- [${when}] ${p.headline ?? ''}\n  ${body}`
+        })
+        .join('\n') || '(no liveblog posts)'
 
-LIVE WEATHER (per region, from Open-Meteo):
+    const niwaBlock =
+      niwa
+        .map((d) => `- ${d.date}: ${d.forecast}${d.wind ? ` · wind ${d.wind}` : ''}`)
+        .join('\n') || '(no NIWA forecast)'
+
+    const prompt = `You are a concise, factual weather briefing writer for a public emergency dashboard covering Tropical Cyclone Vaianu — a Category 2 sub-tropical cyclone approaching the northeast coast of New Zealand's North Island.
+
+Current time (NZST): ${nowNzt}
+Current time (UTC ISO): ${nowIso}
+
+LIVE REGIONAL WEATHER (Open-Meteo):
 ${regional.map((r) => `- ${r.name} [${r.warning}]: wind ${r.wind_kmh}km/h, gusts ${r.gust_kmh}km/h, pressure ${r.pressure_hpa}hPa, rain ${r.precip_mm}mm/hr, ${r.temp_c}°C, ${r.humidity}% RH`).join('\n')}
 
-RECENT NEWS HEADLINES:
-${recentNews.map((n) => `- ${n.source}: ${n.title}`).join('\n') || '(no recent items)'}
+ACTIVE METSERVICE WARNINGS (official NZ forecaster — these are the most authoritative source for landfall timing):
+${warningsBlock}
 
-Write a situation report as JSON with this exact shape:
+NIWA MULTI-DAY FORECAST (government agency):
+${niwaBlock}
+
+STUFF LIVE BLOG (rolling coverage, most recent first):
+${liveblogBlock}
+
+RECENT NEWS (RNZ, Stuff, NZH):
+${newsBlock}
+
+Your task: produce a situation report AND a best-guess landfall time estimate based on ALL the evidence above.
+
+Respond with JSON in this exact shape:
 {
   "headline": "12-word punchy headline, present tense",
   "summary": "2-3 sentence paragraph with the most important developments in the last 15 minutes. Name specific regions and numbers. Be factual, no speculation.",
   "severity": "red" | "orange" | "yellow" | "advisory",
   "key_points": ["bullet 1", "bullet 2", "bullet 3", "bullet 4"],
   "ratings": {
-    "seriousness": 1-10,          // overall gravity of the emergency right now
-    "weather_extremity": 1-10,    // raw meteorological intensity (winds, rain, pressure)
-    "public_safety_risk": 1-10,   // risk to people: evacuations, injury, stranded
-    "infrastructure_risk": 1-10,  // risk to roads, power, buildings, ports
+    "seriousness": 1-10,
+    "weather_extremity": 1-10,
+    "public_safety_risk": 1-10,
+    "infrastructure_risk": 1-10,
     "trajectory": "intensifying" | "steady" | "weakening",
     "rationale": "one sentence, <25 words, explaining the scores"
+  },
+  "landfall": {
+    "landfall_iso": "ISO8601 UTC timestamp — your best estimate of when the cyclone's eye (or centre of damaging winds) reaches the NZ coast",
+    "confidence": "low" | "medium" | "high",
+    "region": "short label, e.g. 'Northland', 'Auckland / Coromandel'",
+    "rationale": "one sentence explaining how you arrived at this — what source drove it"
   }
 }
 
@@ -157,14 +296,24 @@ Rules for the briefing:
 - Use real numbers from the data above, not generic phrases.
 - severity reflects the highest active warning level across regions.
 
-Rules for the ratings (CRITICAL — be calibrated, not inflated):
+Rules for the landfall estimate (CRITICAL — this drives a live countdown on the dashboard):
+- Prefer MetService threat_start_time for the hardest-hit red-warning region, if present. That's the most authoritative clue.
+- Cross-check with NIWA forecast and the most recent news/liveblog mentions of expected landfall.
+- If sources conflict, go with MetService and lower confidence to "medium".
+- If no source gives a specific time, use your best judgement from wind trends + cyclone motion and mark confidence "low".
+- The landfall_iso MUST be a real ISO8601 UTC timestamp (e.g. 2026-04-11T18:00:00Z). It MUST be in the future relative to "Current time (UTC ISO)" above unless landfall has already passed, in which case it may be in the past by at most 12 hours.
+- "region" should name the primary impact zone (the place where the eye crosses the coast).
+- Do NOT simply copy a placeholder. Think about the actual evidence.
+
+Rules for ratings (be calibrated, not inflated):
 - 1-3 = normal weather, no meaningful risk
 - 4-5 = heightened conditions, advisories in place
 - 6-7 = significant cyclone impact, warnings active, disruption likely
 - 8-9 = major emergency, widespread damage/evacuations expected
 - 10 = catastrophic, unprecedented
 - Ground every score in the numbers above. If gusts are under 60km/h region-wide, do NOT score weather_extremity above 5.
-- Return ONLY valid JSON, no markdown fences, no preamble.`
+
+Return ONLY valid JSON, no markdown fences, no preamble.`
 
     const msg = await anthropic.messages.create({
       model: MODEL,
@@ -212,6 +361,25 @@ Rules for the ratings (CRITICAL — be calibrated, not inflated):
           : '',
     }
 
+    // Normalize landfall estimate
+    const rawLandfall = (parsed.landfall ?? {}) as Partial<LandfallEstimate>
+    const landfallIsoRaw = typeof rawLandfall.landfall_iso === 'string' ? rawLandfall.landfall_iso : ''
+    const landfallDate = landfallIsoRaw ? new Date(landfallIsoRaw) : null
+    const landfallValid = landfallDate && !Number.isNaN(landfallDate.getTime())
+    const landfallConfidence: LandfallEstimate['confidence'] =
+      rawLandfall.confidence === 'high' || rawLandfall.confidence === 'low'
+        ? rawLandfall.confidence
+        : 'medium'
+    const landfallEstimateIso = landfallValid ? landfallDate!.toISOString() : null
+    const landfallRegion =
+      typeof rawLandfall.region === 'string' && rawLandfall.region.trim()
+        ? rawLandfall.region.trim().slice(0, 120)
+        : null
+    const landfallRationale =
+      typeof rawLandfall.rationale === 'string' && rawLandfall.rationale.trim()
+        ? rawLandfall.rationale.trim().slice(0, 400)
+        : null
+
     // Save to DB
     const { data: saved, error: insertError } = await supabase
       .from('cyclone_summaries')
@@ -220,10 +388,20 @@ Rules for the ratings (CRITICAL — be calibrated, not inflated):
         summary: parsed.summary,
         severity: parsed.severity,
         key_points: parsed.key_points,
-        regional_snapshot: { regions: regional, news_count: recentNews.length },
+        regional_snapshot: {
+          regions: regional,
+          news_count: recentNews.length,
+          warnings_count: warnings.length,
+          liveblog_count: liveblog.length,
+          niwa_days: niwa.length,
+        },
         ratings,
         seriousness: ratings.seriousness,
         model: MODEL,
+        landfall_estimate_iso: landfallEstimateIso,
+        landfall_confidence: landfallEstimateIso ? landfallConfidence : null,
+        landfall_region: landfallRegion,
+        landfall_rationale: landfallRationale,
       })
       .select()
       .single()

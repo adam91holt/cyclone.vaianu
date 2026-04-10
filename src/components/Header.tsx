@@ -1,11 +1,18 @@
-import { Wind } from 'lucide-react'
+import { Wind, Sparkles } from 'lucide-react'
 import { useCountdown } from '@/hooks/useCountdown'
-import { LANDFALL_TIME_ISO } from '@/lib/cyclone'
+import { useLandfall, formatLandfallLabel } from '@/hooks/useLandfall'
 import { LiveViewers } from '@/components/LiveViewers'
 import { ShareButton } from '@/components/ShareButton'
 
+const CONFIDENCE_STYLES = {
+  high: 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10',
+  medium: 'text-amber-300 border-amber-500/40 bg-amber-500/10',
+  low: 'text-white/60 border-white/20 bg-white/5',
+} as const
+
 export function Header() {
-  const countdown = useCountdown(LANDFALL_TIME_ISO)
+  const landfall = useLandfall()
+  const countdown = useCountdown(landfall.iso)
 
   return (
     <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-white/10">
@@ -66,8 +73,29 @@ export function Header() {
             {countdown.formatted}
           </div>
           <div className="text-[10px] uppercase tracking-wider text-white/40 mt-0.5">
-            Sun 12 Apr · 06:00 NZST
+            {formatLandfallLabel(landfall.iso)} · {landfall.region}
           </div>
+          {landfall.isAi && landfall.confidence && (
+            <div
+              className="group relative mt-1.5 cursor-help"
+              title={landfall.rationale ?? ''}
+            >
+              <div
+                className={`flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-[0.15em] ${CONFIDENCE_STYLES[landfall.confidence]}`}
+              >
+                <Sparkles className="h-2.5 w-2.5" />
+                AI estimate · {landfall.confidence} confidence
+              </div>
+              {landfall.rationale && (
+                <div className="absolute right-0 top-full mt-1.5 w-72 rounded-md border border-white/15 bg-[#0a0f1e] p-3 text-[10px] text-white/70 leading-relaxed shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-20 text-left normal-case tracking-normal font-sans">
+                  <div className="text-[9px] uppercase tracking-wider font-mono text-white/40 mb-1">
+                    How the AI got here
+                  </div>
+                  {landfall.rationale}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -2,13 +2,15 @@ import { useRef, useState } from 'react'
 import { Share2, Download, Copy, Check, X, Loader2 } from 'lucide-react'
 import { toPng } from 'html-to-image'
 import { useCountdown } from '@/hooks/useCountdown'
-import { LANDFALL_TIME_ISO, REGIONS } from '@/lib/cyclone'
+import { useLandfall, formatLandfallLabel } from '@/hooks/useLandfall'
+import { REGIONS } from '@/lib/cyclone'
 import { useMetServiceNationalWarnings } from '@/hooks/useMetServiceNational'
 import { useRegionWeather } from '@/hooks/useWeather'
 import { ShareCard, type ShareCardData } from '@/components/ShareCard'
 
 function useShareData(): ShareCardData {
-  const cd = useCountdown(LANDFALL_TIME_ISO)
+  const landfall = useLandfall()
+  const cd = useCountdown(landfall.iso)
   const { data: warnings } = useMetServiceNationalWarnings()
   const { data: regions } = useRegionWeather()
 
@@ -41,7 +43,7 @@ function useShareData(): ShareCardData {
 
   return {
     landfallText,
-    landfallTime: 'Sun 12 Apr · 06:00 NZST',
+    landfallTime: `${formatLandfallLabel(landfall.iso)} · ${landfall.region}`,
     red: counts.red,
     orange: counts.orange,
     yellow: counts.yellow,

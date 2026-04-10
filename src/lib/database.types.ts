@@ -20,6 +20,10 @@ export type Database = {
           headline: string
           id: string
           key_points: Json
+          landfall_confidence: string | null
+          landfall_estimate_iso: string | null
+          landfall_rationale: string | null
+          landfall_region: string | null
           model: string
           ratings: Json | null
           regional_snapshot: Json
@@ -32,6 +36,10 @@ export type Database = {
           headline: string
           id?: string
           key_points?: Json
+          landfall_confidence?: string | null
+          landfall_estimate_iso?: string | null
+          landfall_rationale?: string | null
+          landfall_region?: string | null
           model?: string
           ratings?: Json | null
           regional_snapshot?: Json
@@ -44,6 +52,10 @@ export type Database = {
           headline?: string
           id?: string
           key_points?: Json
+          landfall_confidence?: string | null
+          landfall_estimate_iso?: string | null
+          landfall_rationale?: string | null
+          landfall_region?: string | null
           model?: string
           ratings?: Json | null
           regional_snapshot?: Json
