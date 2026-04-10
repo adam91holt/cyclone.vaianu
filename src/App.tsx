@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import {
   LayoutDashboard,
   CloudRain,
@@ -50,6 +50,15 @@ const TABS: TabDef[] = [
 
 function App() {
   const [tab, setTab] = useState<TabKey>('dashboard')
+  const sectionRef = useRef<HTMLDivElement>(null)
+
+  const switchTab = useCallback((key: TabKey) => {
+    setTab(key)
+    // Let React render the new tab content, then scroll to it
+    requestAnimationFrame(() => {
+      sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [])
 
   return (
     <div className="min-h-screen bg-[#070b16] text-white selection:bg-red-500/30 overflow-x-hidden">
@@ -88,7 +97,7 @@ function App() {
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setTab(key)}
+                    onClick={() => switchTab(key)}
                     className={`group text-left rounded-md px-3 py-2.5 transition-all border ${
                       active
                         ? 'bg-red-500/15 border-red-500/40 text-white'
@@ -114,7 +123,7 @@ function App() {
             </nav>
           </aside>
 
-          <section className="lg:col-span-10 min-w-0 space-y-3">
+          <section ref={sectionRef} className="lg:col-span-10 min-w-0 space-y-3 scroll-mt-4">
             {tab === 'dashboard' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
                 <div className="lg:col-span-9">
@@ -171,7 +180,7 @@ function App() {
               <button
                 key={key}
                 type="button"
-                onClick={() => setTab(key)}
+                onClick={() => switchTab(key)}
                 className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors ${
                   active ? 'text-red-400' : 'text-white/40 active:text-white/70'
                 }`}
