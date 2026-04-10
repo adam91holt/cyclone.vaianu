@@ -1,5 +1,5 @@
 import type { Ratings } from '@/hooks/useSummary'
-import { AlertTriangle, CloudLightning, HeartPulse, Building2, TrendingDown, TrendingUp, Minus } from 'lucide-react'
+import { CloudLightning, HeartPulse, Building2, TrendingDown, TrendingUp, Minus } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 function scoreColor(score: number): string {
@@ -95,9 +95,8 @@ export function RatingsBar({ ratings, compact = false, showRationale = true }: R
   return (
     <div className="space-y-2">
       <div
-        className={`grid grid-cols-2 ${compact ? 'sm:grid-cols-4' : 'md:grid-cols-4'} gap-1.5`}
+        className={`grid grid-cols-1 ${compact ? 'sm:grid-cols-3' : 'md:grid-cols-3'} gap-1.5`}
       >
-        <Metric icon={AlertTriangle} label="Seriousness" score={ratings.seriousness} compact={compact} />
         <Metric
           icon={CloudLightning}
           label="Weather"
