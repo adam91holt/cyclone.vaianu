@@ -8,6 +8,7 @@ import {
   Terminal,
   CloudSun,
 } from 'lucide-react'
+import { LiveRadioBar } from '@/components/LiveRadioBar'
 import { AlertBar } from '@/components/AlertBar'
 import { Header } from '@/components/Header'
 import { HeroWind } from '@/components/HeroWind'
@@ -62,6 +63,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#070b16] text-white selection:bg-red-500/30 overflow-x-hidden">
+      <LiveRadioBar />
       <AlertBar />
       <Header />
       <NewsTicker />
