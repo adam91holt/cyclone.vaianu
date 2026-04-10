@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLatestSummary } from '@/hooks/useSummary'
 import { Sparkles } from 'lucide-react'
-import { RatingsBar } from '@/components/RatingsBar'
 
 function timeAgo(iso: string) {
   const delta = Math.max(0, Date.now() - new Date(iso).getTime())
@@ -88,12 +87,6 @@ export function AIBriefing() {
             {summary.headline}
           </h2>
           <p className="text-sm text-white/80 leading-relaxed mb-4">{summary.summary}</p>
-
-          {summary.ratings && (
-            <div className="mb-4">
-              <RatingsBar ratings={summary.ratings} />
-            </div>
-          )}
 
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {summary.key_points.map((point, i) => (

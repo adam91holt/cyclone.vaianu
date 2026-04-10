@@ -89,6 +89,57 @@ export type Database = {
         }
         Relationships: []
       }
+      metservice_observations: {
+        Row: {
+          display_order: number
+          fetched_at: string
+          humidity: number | null
+          obs_time: string | null
+          pressure_hpa: number | null
+          pressure_trend: string | null
+          rainfall_24h_mm: number | null
+          rainfall_3h_mm: number | null
+          station: string | null
+          temp_c: number | null
+          town_name: string
+          town_slug: string
+          wind_direction: string | null
+          wind_speed_kmh: number | null
+        }
+        Insert: {
+          display_order?: number
+          fetched_at?: string
+          humidity?: number | null
+          obs_time?: string | null
+          pressure_hpa?: number | null
+          pressure_trend?: string | null
+          rainfall_24h_mm?: number | null
+          rainfall_3h_mm?: number | null
+          station?: string | null
+          temp_c?: number | null
+          town_name: string
+          town_slug: string
+          wind_direction?: string | null
+          wind_speed_kmh?: number | null
+        }
+        Update: {
+          display_order?: number
+          fetched_at?: string
+          humidity?: number | null
+          obs_time?: string | null
+          pressure_hpa?: number | null
+          pressure_trend?: string | null
+          rainfall_24h_mm?: number | null
+          rainfall_3h_mm?: number | null
+          station?: string | null
+          temp_c?: number | null
+          town_name?: string
+          town_slug?: string
+          wind_direction?: string | null
+          wind_speed_kmh?: number | null
+        }
+        Relationships: []
+      }
       metservice_warnings_national: {
         Row: {
           area_description: string | null
