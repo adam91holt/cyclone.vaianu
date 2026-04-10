@@ -52,12 +52,12 @@ function App() {
   const [tab, setTab] = useState<TabKey>('dashboard')
 
   return (
-    <div className="min-h-screen bg-[#070b16] text-white selection:bg-red-500/30">
+    <div className="min-h-screen bg-[#070b16] text-white selection:bg-red-500/30 overflow-x-hidden">
       <AlertBar />
       <Header />
       <NewsTicker />
 
-      <main className="mx-auto max-w-[1500px] px-4 sm:px-6 py-5 space-y-4">
+      <main className="mx-auto max-w-[1500px] px-4 sm:px-6 py-5 pb-24 lg:pb-5 space-y-4">
         {/* Top band — AI situation report + NIWA video forecast side by side */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
           <div className="lg:col-span-8">
@@ -77,10 +77,11 @@ function App() {
           </div>
         </div>
 
-        {/* Tabs row — sidebar on the left, content on the right */}
+        {/* Tabs row — sidebar on desktop, content area */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-          <aside className="lg:col-span-2">
-            <nav className="bg-[#0f1729]/80 border border-white/10 rounded-lg p-2 flex flex-row lg:flex-col gap-1 overflow-x-auto lg:overflow-visible">
+          {/* Desktop sidebar — hidden on mobile */}
+          <aside className="hidden lg:block lg:col-span-2">
+            <nav className="bg-[#0f1729]/80 border border-white/10 rounded-lg p-2 flex flex-col gap-1">
               {TABS.map(({ key, label, icon: Icon, sub }) => {
                 const active = tab === key
                 return (
@@ -88,7 +89,7 @@ function App() {
                     key={key}
                     type="button"
                     onClick={() => setTab(key)}
-                    className={`group shrink-0 lg:shrink text-left rounded-md px-3 py-2.5 transition-all border ${
+                    className={`group text-left rounded-md px-3 py-2.5 transition-all border ${
                       active
                         ? 'bg-red-500/15 border-red-500/40 text-white'
                         : 'bg-transparent border-transparent text-white/60 hover:bg-white/[0.04] hover:text-white/90'
@@ -104,7 +105,7 @@ function App() {
                         {label}
                       </span>
                     </div>
-                    <div className="hidden lg:block text-[9px] text-white/35 font-mono uppercase tracking-wider mt-0.5 pl-5">
+                    <div className="text-[9px] text-white/35 font-mono uppercase tracking-wider mt-0.5 pl-5">
                       {sub}
                     </div>
                   </button>
@@ -160,6 +161,28 @@ function App() {
           </section>
         </div>
       </main>
+
+      {/* Mobile bottom tab bar */}
+      <nav className="fixed bottom-0 inset-x-0 z-50 lg:hidden bg-[#070b16]/95 backdrop-blur-md border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
+        <div className="flex items-stretch justify-around">
+          {TABS.map(({ key, label, icon: Icon }) => {
+            const active = tab === key
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTab(key)}
+                className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors ${
+                  active ? 'text-red-400' : 'text-white/40 active:text-white/70'
+                }`}
+              >
+                <Icon className={`h-5 w-5 ${active ? 'text-red-400' : ''}`} />
+                <span className="text-[9px] font-bold uppercase tracking-wider">{label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
 
       <footer className="max-w-[1500px] mx-auto px-6 py-8 text-[10px] uppercase tracking-wider text-white/30 font-mono">
         Data: Open-Meteo · MetService · NIWA · Windy.com · adsb.lol · RNZ / Stuff / NZ Herald · AI rollups by Claude Sonnet 4.6 · Built by{' '}
