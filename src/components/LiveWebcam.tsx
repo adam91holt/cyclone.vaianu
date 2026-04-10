@@ -38,6 +38,17 @@ export function LiveWebcam({ src, name, sub }: LiveWebcamProps) {
         enableWorker: true,
         lowLatencyMode: false,
         backBufferLength: 30,
+        // CoroLive's Cloudflare hotlink-protects on Referer — zero it out
+        // on every fetch so segments/manifest return 200 instead of 403.
+        xhrSetup: (xhr) => {
+          xhr.withCredentials = false
+        },
+        fetchSetup: (context, initParams) => {
+          initParams.referrer = ''
+          initParams.referrerPolicy = 'no-referrer'
+          initParams.credentials = 'omit'
+          return new Request(context.url, initParams)
+        },
       })
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         console.log('[webcam] manifest parsed', name)
