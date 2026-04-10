@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useSummaryHistory, type CycloneSummary } from '@/hooks/useSummary'
-import { RatingsBar, scoreColor } from '@/components/RatingsBar'
+import { RatingsBar } from '@/components/RatingsBar'
 import { History, ChevronDown, ChevronRight } from 'lucide-react'
 
 function formatNzt(iso: string) {
@@ -30,7 +30,6 @@ function severityDot(severity: string | null): string {
 function Row({ summary, defaultOpen }: { summary: CycloneSummary; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen ?? false)
   const ratings = summary.ratings
-  const seriousness = ratings?.seriousness ?? summary.seriousness ?? null
 
   return (
     <div className="border border-white/5 rounded-md bg-white/[0.02] overflow-hidden">
@@ -60,13 +59,6 @@ function Row({ summary, defaultOpen }: { summary: CycloneSummary; defaultOpen?: 
           </div>
         </div>
 
-        {seriousness != null && (
-          <span
-            className={`shrink-0 font-mono text-[10px] font-bold px-1.5 py-0.5 border rounded ${scoreColor(seriousness)} tabular-nums`}
-          >
-            {seriousness}/10
-          </span>
-        )}
       </button>
 
       {open && (
