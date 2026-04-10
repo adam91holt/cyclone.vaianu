@@ -20,56 +20,79 @@ export function LiveWebcam({ src, name, sub }: LiveWebcamProps) {
     setError(null)
     setLoaded(false)
 
-    // Safari / iOS play HLS natively.
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    let hls: Hls | null = null
+
+    const handleLoaded = () => setLoaded(true)
+    video.addEventListener('loadeddata', handleLoaded)
+    video.addEventListener('playing', handleLoaded)
+
+    const tryPlay = () => {
+      video.play().catch((err) => {
+        // Autoplay blocked — not fatal, user can press play
+        console.warn('[webcam] autoplay blocked', name, err)
+      })
+    }
+
+    if (Hls.isSupported()) {
+      hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+        backBufferLength: 30,
+      })
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        console.log('[webcam] manifest parsed', name)
+        tryPlay()
+      })
+      hls.on(Hls.Events.ERROR, (_evt, data) => {
+        console.error('[webcam] hls error', name, data.type, data.details, data)
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              // Try to recover
+              hls?.startLoad()
+              break
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hls?.recoverMediaError()
+              break
+            default:
+              setError(`${data.type}: ${data.details}`)
+              hls?.destroy()
+          }
+        }
+      })
+      hls.loadSource(src)
+      hls.attachMedia(video)
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari / iOS native HLS
       video.src = src
-      const onLoaded = () => setLoaded(true)
-      video.addEventListener('loadeddata', onLoaded)
-      return () => {
-        video.removeEventListener('loadeddata', onLoaded)
+      tryPlay()
+    } else {
+      setError('HLS not supported in this browser')
+    }
+
+    return () => {
+      video.removeEventListener('loadeddata', handleLoaded)
+      video.removeEventListener('playing', handleLoaded)
+      if (hls) {
+        hls.destroy()
+      } else {
         video.removeAttribute('src')
         video.load()
       }
     }
-
-    // Everywhere else: hls.js.
-    if (!Hls.isSupported()) {
-      setError('HLS not supported in this browser')
-      return
-    }
-
-    const hls = new Hls({
-      enableWorker: true,
-      lowLatencyMode: true,
-      backBufferLength: 30,
-    })
-
-    hls.loadSource(src)
-    hls.attachMedia(video)
-
-    hls.on(Hls.Events.MANIFEST_PARSED, () => setLoaded(true))
-    hls.on(Hls.Events.ERROR, (_evt, data) => {
-      if (data.fatal) {
-        console.error('hls fatal error', data)
-        setError(data.details || 'Stream error')
-      }
-    })
-
-    return () => {
-      hls.destroy()
-    }
-  }, [src])
+  }, [src, name])
 
   return (
     <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black">
-      <div className="aspect-video relative">
+      <div className="aspect-video relative bg-black">
         <video
           ref={videoRef}
           muted
           playsInline
           autoPlay
           controls
-          className="absolute inset-0 h-full w-full object-cover"
+          crossOrigin="anonymous"
+          className="absolute inset-0 h-full w-full object-cover bg-black"
         />
         {!loaded && !error && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/70 pointer-events-none">
@@ -80,10 +103,10 @@ export function LiveWebcam({ src, name, sub }: LiveWebcamProps) {
           </div>
         )}
         {error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/80 text-white/70">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/80 text-white/70 p-3 text-center">
             <AlertCircle className="h-5 w-5 text-red-400" />
             <div className="text-[10px] uppercase tracking-wider font-mono">Stream unavailable</div>
-            <div className="text-[9px] font-mono text-white/40">{error}</div>
+            <div className="text-[9px] font-mono text-white/40 break-all">{error}</div>
           </div>
         )}
       </div>
