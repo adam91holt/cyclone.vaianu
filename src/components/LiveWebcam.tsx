@@ -21,12 +21,16 @@ export function LiveWebcam({ src, name, sub }: LiveWebcamProps) {
     setLoaded(false)
 
     let hls: Hls | null = null
+    let destroyed = false
 
-    const handleLoaded = () => setLoaded(true)
+    const handleLoaded = () => {
+      if (!destroyed) setLoaded(true)
+    }
     video.addEventListener('loadeddata', handleLoaded)
     video.addEventListener('playing', handleLoaded)
 
     const tryPlay = () => {
+      if (destroyed) return
       video.play().catch((err) => {
         // Autoplay blocked — not fatal, user can press play
         console.warn('[webcam] autoplay blocked', name, err)
@@ -59,7 +63,6 @@ export function LiveWebcam({ src, name, sub }: LiveWebcamProps) {
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              // Try to recover
               hls?.startLoad()
               break
             case Hls.ErrorTypes.MEDIA_ERROR:
@@ -81,15 +84,38 @@ export function LiveWebcam({ src, name, sub }: LiveWebcamProps) {
       setError('HLS not supported in this browser')
     }
 
+    // Pause + stop loading when the browser tab goes to background,
+    // resume when it comes back. Keeps bandwidth use honest.
+    const onVisibility = () => {
+      if (document.hidden) {
+        video.pause()
+        hls?.stopLoad()
+      } else {
+        hls?.startLoad()
+        tryPlay()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
     return () => {
+      destroyed = true
+      document.removeEventListener('visibilitychange', onVisibility)
       video.removeEventListener('loadeddata', handleLoaded)
       video.removeEventListener('playing', handleLoaded)
-      if (hls) {
-        hls.destroy()
-      } else {
-        video.removeAttribute('src')
-        video.load()
+      // Stop playback + network activity cleanly before teardown.
+      try {
+        video.pause()
+      } catch {
+        /* ignore */
       }
+      if (hls) {
+        hls.stopLoad()
+        hls.detachMedia()
+        hls.destroy()
+      }
+      video.removeAttribute('src')
+      video.load()
+      console.log('[webcam] torn down', name)
     }
   }, [src, name])
 
