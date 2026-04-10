@@ -16,8 +16,8 @@ export function Header() {
 
   return (
     <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-white/10">
-      <div className="flex items-end justify-between gap-4 max-w-[1500px] mx-auto">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 max-w-[1500px] mx-auto">
+        <div className="min-w-0">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
             <div className="flex items-center gap-1.5 rounded-sm bg-red-600/20 border border-red-600/40 px-2 py-0.5">
               <Wind className="h-3 w-3 text-red-400" />
@@ -40,32 +40,7 @@ export function Header() {
           </p>
         </div>
 
-        <div className="text-right shrink-0 flex flex-col items-end">
-          <a
-            href="https://thecolab.ai/"
-            target="_blank"
-            rel="noreferrer"
-            className="group relative flex items-center gap-3.5 rounded-2xl border border-white/15 bg-gradient-to-br from-white/[0.06] via-white/[0.03] to-transparent hover:border-white/30 hover:from-white/[0.10] transition-all px-4 py-3 mb-3 overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.12),transparent_60%)] opacity-0 group-hover:opacity-100 transition-opacity" />
-            <img
-              src="/thecolab-logo.jpg"
-              alt="The Colab"
-              className="relative h-14 w-14 shrink-0 rounded-xl object-cover ring-1 ring-white/20 group-hover:ring-white/40 transition-all"
-              loading="lazy"
-            />
-            <div className="relative text-left leading-tight">
-              <div className="text-[9px] uppercase tracking-[0.22em] font-mono text-white/45 group-hover:text-white/60 transition-colors mb-0.5">
-                Built by
-              </div>
-              <div className="font-display text-lg font-bold text-white tracking-tight leading-none">
-                thecolab<span className="text-red-400">.</span>ai
-              </div>
-              <div className="mt-1 text-[10px] uppercase tracking-[0.14em] font-mono text-white/50 group-hover:text-white/70 transition-colors">
-                Supporting the cyclone response
-              </div>
-            </div>
-          </a>
+        <div className="text-left sm:text-right sm:shrink-0 flex flex-col items-start sm:items-end">
           <div className="text-[10px] uppercase tracking-[0.25em] text-white/50 mb-1">
             {countdown.isPast ? 'Landfall passed' : 'Landfall in'}
           </div>
@@ -87,7 +62,7 @@ export function Header() {
                 AI estimate · {landfall.confidence} confidence
               </div>
               {landfall.rationale && (
-                <div className="absolute right-0 top-full mt-1.5 w-72 rounded-md border border-white/15 bg-[#0a0f1e] p-3 text-[10px] text-white/70 leading-relaxed shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-20 text-left normal-case tracking-normal font-sans">
+                <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1.5 w-72 max-w-[calc(100vw-2rem)] rounded-md border border-white/15 bg-[#0a0f1e] p-3 text-[10px] text-white/70 leading-relaxed shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-20 text-left normal-case tracking-normal font-sans">
                   <div className="text-[9px] uppercase tracking-wider font-mono text-white/40 mb-1">
                     How the AI got here
                   </div>

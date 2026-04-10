@@ -92,6 +92,32 @@ console.log(summary.headline);`
         <span>·</span>
         <span>CORS open</span>
       </div>
+
+      <a
+        href="https://thecolab.ai/"
+        target="_blank"
+        rel="noreferrer"
+        className="group relative mt-5 flex items-center gap-3.5 rounded-2xl border border-white/15 bg-gradient-to-br from-white/[0.06] via-white/[0.03] to-transparent hover:border-white/30 hover:from-white/[0.10] transition-all px-4 py-3 overflow-hidden"
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.12),transparent_60%)] opacity-0 group-hover:opacity-100 transition-opacity" />
+        <img
+          src="/thecolab-logo.jpg"
+          alt="The Colab"
+          className="relative h-14 w-14 shrink-0 rounded-xl object-cover ring-1 ring-white/20 group-hover:ring-white/40 transition-all"
+          loading="lazy"
+        />
+        <div className="relative text-left leading-tight">
+          <div className="text-[9px] uppercase tracking-[0.22em] font-mono text-white/45 group-hover:text-white/60 transition-colors mb-0.5">
+            Built by
+          </div>
+          <div className="font-display text-lg font-bold text-white tracking-tight leading-none">
+            thecolab<span className="text-red-400">.</span>ai
+          </div>
+          <div className="mt-1 text-[10px] uppercase tracking-[0.14em] font-mono text-white/50 group-hover:text-white/70 transition-colors">
+            Supporting the cyclone response
+          </div>
+        </div>
+      </a>
     </div>
   )
 }
