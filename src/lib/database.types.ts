@@ -260,6 +260,42 @@ export type Database = {
         }
         Relationships: []
       }
+      nema_alerts: {
+        Row: {
+          body: string | null
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          link: string | null
+          published_at: string | null
+          severity: string
+          summary: string | null
+          title: string
+        }
+        Insert: {
+          body?: string | null
+          first_seen_at?: string
+          id: string
+          last_seen_at?: string
+          link?: string | null
+          published_at?: string | null
+          severity: string
+          summary?: string | null
+          title: string
+        }
+        Update: {
+          body?: string | null
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          link?: string | null
+          published_at?: string | null
+          severity?: string
+          summary?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       news_items: {
         Row: {
           fetched_at: string
@@ -392,6 +428,78 @@ export type Database = {
           thumbnail_url?: string | null
           vimeo_id?: string
           vimeo_uri?: string
+        }
+        Relationships: []
+      }
+      nzta_road_events: {
+        Row: {
+          alternative_route: string | null
+          centroid_lat: number | null
+          centroid_lon: number | null
+          comments: string | null
+          description: string | null
+          end_date: string | null
+          event_type: string | null
+          expected_resolution: string | null
+          first_seen_at: string
+          geometry: Json | null
+          highway: string | null
+          id: string
+          impact: string | null
+          island: string | null
+          last_seen_at: string
+          location: string | null
+          planned: boolean
+          region: string | null
+          severity: string
+          start_date: string | null
+          status: string | null
+        }
+        Insert: {
+          alternative_route?: string | null
+          centroid_lat?: number | null
+          centroid_lon?: number | null
+          comments?: string | null
+          description?: string | null
+          end_date?: string | null
+          event_type?: string | null
+          expected_resolution?: string | null
+          first_seen_at?: string
+          geometry?: Json | null
+          highway?: string | null
+          id: string
+          impact?: string | null
+          island?: string | null
+          last_seen_at?: string
+          location?: string | null
+          planned?: boolean
+          region?: string | null
+          severity: string
+          start_date?: string | null
+          status?: string | null
+        }
+        Update: {
+          alternative_route?: string | null
+          centroid_lat?: number | null
+          centroid_lon?: number | null
+          comments?: string | null
+          description?: string | null
+          end_date?: string | null
+          event_type?: string | null
+          expected_resolution?: string | null
+          first_seen_at?: string
+          geometry?: Json | null
+          highway?: string | null
+          id?: string
+          impact?: string | null
+          island?: string | null
+          last_seen_at?: string
+          location?: string | null
+          planned?: boolean
+          region?: string | null
+          severity?: string
+          start_date?: string | null
+          status?: string | null
         }
         Relationships: []
       }
@@ -600,6 +708,7 @@ export type Database = {
           recorded_at: string
           region: string
           temp_c: number
+          wind_direction_deg: number | null
           wind_kmh: number
         }
         Insert: {
@@ -611,6 +720,7 @@ export type Database = {
           recorded_at?: string
           region: string
           temp_c: number
+          wind_direction_deg?: number | null
           wind_kmh: number
         }
         Update: {
@@ -622,6 +732,7 @@ export type Database = {
           recorded_at?: string
           region?: string
           temp_c?: number
+          wind_direction_deg?: number | null
           wind_kmh?: number
         }
         Relationships: []
@@ -641,6 +752,20 @@ export type Database = {
           last_status: string
           last_success_at: string
           schedule: string
+        }[]
+      }
+      get_latest_region_weather: {
+        Args: never
+        Returns: {
+          gust_kmh: number
+          humidity: number
+          precip_mm: number
+          pressure_hpa: number
+          recorded_at: string
+          region: string
+          temp_c: number
+          wind_direction_deg: number
+          wind_kmh: number
         }[]
       }
       get_river_summary: {

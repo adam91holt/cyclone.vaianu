@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
 import { REGIONS } from '@/lib/cyclone'
 
 export interface RegionWeather {
@@ -12,40 +13,46 @@ export interface RegionWeather {
   humidity: number
 }
 
-interface OpenMeteoResponse {
-  current: {
-    time: string
-    temperature_2m: number
-    wind_speed_10m: number
-    wind_direction_10m: number
-    wind_gusts_10m: number
-    pressure_msl: number
-    precipitation: number
-    relative_humidity_2m: number
-  }
+// weather_history is written by the log-weather Edge Function every 10 min
+// (pg_cron: vaianu-log-weather-every-10) using Open-Meteo. The logger keys
+// rows by the region's display name ("Bay of Plenty"), not our canonical
+// id ("bay_of_plenty") — this map reconciles the two.
+const NAME_TO_ID: Record<string, string> = Object.fromEntries(
+  REGIONS.map((r) => [r.name, r.id]),
+)
+
+interface LatestRow {
+  region: string
+  wind_kmh: number | null
+  gust_kmh: number | null
+  wind_direction_deg: number | null
+  pressure_hpa: number | null
+  precip_mm: number | null
+  temp_c: number | null
+  humidity: number | null
 }
 
 async function fetchRegionWeather(): Promise<RegionWeather[]> {
-  const lats = REGIONS.map((r) => r.lat).join(',')
-  const lons = REGIONS.map((r) => r.lon).join(',')
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl&wind_speed_unit=kmh&timezone=Pacific%2FAuckland`
+  const { data, error } = await supabase.rpc('get_latest_region_weather')
+  if (error) throw error
 
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`Weather fetch failed: ${res.status}`)
-  const payload = (await res.json()) as OpenMeteoResponse | OpenMeteoResponse[]
-  const rows = Array.isArray(payload) ? payload : [payload]
+  const byId = new Map<string, LatestRow>()
+  for (const row of (data ?? []) as LatestRow[]) {
+    const id = NAME_TO_ID[row.region]
+    if (id) byId.set(id, row)
+  }
 
-  return REGIONS.map((region, i) => {
-    const c = rows[i].current
+  return REGIONS.map((region) => {
+    const row = byId.get(region.id)
     return {
       regionId: region.id,
-      windKmh: Math.round(c.wind_speed_10m),
-      gustKmh: Math.round(c.wind_gusts_10m),
-      windDirection: Math.round(c.wind_direction_10m),
-      pressureHpa: Math.round(c.pressure_msl),
-      precipitationMm: Number(c.precipitation.toFixed(1)),
-      temperatureC: Math.round(c.temperature_2m),
-      humidity: Math.round(c.relative_humidity_2m),
+      windKmh: Math.round(row?.wind_kmh ?? 0),
+      gustKmh: Math.round(row?.gust_kmh ?? 0),
+      windDirection: Math.round(row?.wind_direction_deg ?? 0),
+      pressureHpa: Math.round(row?.pressure_hpa ?? 0),
+      precipitationMm: Number((row?.precip_mm ?? 0).toFixed(1)),
+      temperatureC: Math.round(row?.temp_c ?? 0),
+      humidity: Math.round(row?.humidity ?? 0),
     }
   })
 }
@@ -54,7 +61,8 @@ export function useRegionWeather() {
   return useQuery({
     queryKey: ['weather', 'regions'],
     queryFn: fetchRegionWeather,
-    refetchInterval: 60_000,
-    staleTime: 30_000,
+    // Cron writes every 10 min, so polling faster than ~2 min is pointless.
+    refetchInterval: 2 * 60 * 1000,
+    staleTime: 90 * 1000,
   })
 }

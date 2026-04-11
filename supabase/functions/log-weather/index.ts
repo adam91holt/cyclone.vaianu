@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
   try {
     const lats = REGIONS.map((r) => r.lat).join(',')
     const lons = REGIONS.map((r) => r.lon).join(',')
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,wind_gusts_10m,pressure_msl&wind_speed_unit=kmh&timezone=Pacific%2FAuckland`
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl&wind_speed_unit=kmh&timezone=Pacific%2FAuckland`
     const res = await fetch(url)
     if (!res.ok) throw new Error(`Open-Meteo ${res.status}`)
     const payload = await res.json()
@@ -53,6 +53,7 @@ Deno.serve(async (req) => {
         recorded_at: now,
         wind_kmh: Number(c.wind_speed_10m),
         gust_kmh: Number(c.wind_gusts_10m),
+        wind_direction_deg: Math.round(Number(c.wind_direction_10m)),
         pressure_hpa: Number(c.pressure_msl),
         temp_c: Number(c.temperature_2m),
         humidity: Math.round(Number(c.relative_humidity_2m)),
