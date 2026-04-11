@@ -14,7 +14,11 @@ const CONFIDENCE_STYLES = {
   low: 'text-white/60 border-white/20 bg-white/5',
 } as const
 
-export function Header() {
+interface HeaderProps {
+  hideShareMobileFab?: boolean
+}
+
+export function Header({ hideShareMobileFab }: HeaderProps = {}) {
   const landfall = useLandfall()
   const countdown = useCountdown(landfall.iso)
   const { label: regionLabel, isFiltered } = useSelectedRegion()
@@ -38,7 +42,7 @@ export function Header() {
               Sub-tropical · Intensifying
             </span>
             <LiveViewers />
-            <ShareButton />
+            <ShareButton hideMobileFab={hideShareMobileFab} />
             <FeedbackButton />
           </div>
           <h1 className="font-display text-5xl sm:text-6xl font-bold tracking-tighter leading-[0.85]">
