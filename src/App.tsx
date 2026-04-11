@@ -153,7 +153,7 @@ function App() {
         {/* Top band — AI situation report + NIWA video forecast side by side */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
           <div className="lg:col-span-8">
-            <AIBriefing />
+            <AIBriefing onReadFullReport={() => switchTab('report')} />
           </div>
           <div className="lg:col-span-4">
             <NiwaVideoCard />

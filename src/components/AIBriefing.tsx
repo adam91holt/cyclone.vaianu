@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useLatestSummary } from '@/hooks/useSummary'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, ArrowRight } from 'lucide-react'
+
+interface AIBriefingProps {
+  /** Called when the user clicks "Read the full Opus report" CTA. */
+  onReadFullReport?: () => void
+}
 
 function timeAgo(iso: string) {
   const delta = Math.max(0, Date.now() - new Date(iso).getTime())
@@ -27,7 +32,7 @@ function useNextTick(intervalMin: number, lastIso: string | null) {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
-export function AIBriefing() {
+export function AIBriefing({ onReadFullReport }: AIBriefingProps = {}) {
   const { data: summary, isLoading } = useLatestSummary()
   const nextIn = useNextTick(15, summary?.generated_at ?? null)
 
@@ -101,6 +106,29 @@ export function AIBriefing() {
               </li>
             ))}
           </ul>
+
+          {onReadFullReport && (
+            <button
+              type="button"
+              onClick={onReadFullReport}
+              className="group mt-4 w-full sm:w-auto flex items-center justify-between sm:justify-start gap-3 rounded-lg border border-white/15 bg-white/[0.04] hover:bg-white/[0.10] hover:border-white/30 transition-all px-4 py-2.5 text-left"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-violet-500/30 to-fuchsia-500/20 border border-white/10 shrink-0">
+                  <Sparkles className="h-3 w-3 text-violet-200" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-white/90 truncate">
+                    Read the full hourly report
+                  </div>
+                  <div className="text-[9px] font-mono text-white/45 uppercase tracking-wider">
+                    Deeper analysis · Claude Opus 4.6
+                  </div>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-white/50 group-hover:text-white group-hover:translate-x-0.5 transition-all shrink-0" />
+            </button>
+          )}
         </>
       )}
 
