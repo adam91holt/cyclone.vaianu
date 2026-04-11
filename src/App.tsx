@@ -45,6 +45,7 @@ import { RegionProvider } from '@/context/RegionContext'
 import { SignupPopup } from '@/components/SignupPopup'
 import { CrowdReports } from '@/components/CrowdReports'
 import { AdminReports } from '@/components/AdminReports'
+import { SubmitReportFab } from '@/components/SubmitReportFab'
 // Lazy-loaded — each carries a heavy dependency (hls.js, leaflet,
 // react-markdown) we don't want on the critical path.
 const WebcamsPanel = lazy(() =>
@@ -439,6 +440,7 @@ function App() {
           thecolab.ai
         </a>
       </footer>
+      <SubmitReportFab />
       <SignupPopup />
     </div>
     </RegionProvider>
