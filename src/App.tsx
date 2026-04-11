@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, lazy, Suspense } from 'react'
+import { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react'
 import {
   LayoutDashboard,
   CloudRain,
@@ -13,6 +13,8 @@ import {
   Waves,
   Clock,
   Sparkles,
+  MoreHorizontal,
+  X,
 } from 'lucide-react'
 import { AlertBar } from '@/components/AlertBar'
 import { Header } from '@/components/Header'
@@ -76,17 +78,22 @@ interface TabDef {
   label: string
   icon: React.ComponentType<{ className?: string }>
   sub: string
-  /** Hide from the mobile bottom bar (still shown in the desktop sidebar) */
+  /** Hide from the mobile bottom bar entirely (still shown in the desktop sidebar). */
   desktopOnly?: boolean
+  /**
+   * Pin to the 4-slot primary mobile bottom bar. Non-pinned mobile tabs
+   * live behind the "More" bottom sheet.
+   */
+  mobilePrimary?: boolean
 }
 
 const TABS: TabDef[] = [
-  { key: 'dashboard', label: 'Live Map', icon: LayoutDashboard, sub: 'Windy + regions' },
+  { key: 'dashboard', label: 'Live Map', icon: LayoutDashboard, sub: 'Windy + regions', mobilePrimary: true },
   { key: 'timeline', label: 'Timeline', icon: Clock, sub: 'Notable events · live' },
   { key: 'report', label: 'Opus Report', icon: Sparkles, sub: 'Hourly · Claude Opus 4.6' },
-  { key: 'weather', label: 'Warnings', icon: CloudRain, sub: 'MetService + Open-Meteo' },
+  { key: 'weather', label: 'Warnings', icon: CloudRain, sub: 'MetService + Open-Meteo', mobilePrimary: true },
   { key: 'webcams', label: 'Webcams', icon: Video, sub: 'Live landfall zone' },
-  { key: 'outages', label: 'Outages', icon: Zap, sub: 'Power · live' },
+  { key: 'outages', label: 'Outages', icon: Zap, sub: 'Power · live', mobilePrimary: true },
   { key: 'roads', label: 'Roads', icon: Construction, sub: 'NZTA · live' },
   { key: 'rivers', label: 'Rivers', icon: Waves, sub: '1,700+ gauges · 10m' },
   { key: 'niwa', label: 'NIWA', icon: CloudSun, sub: '8-day + @NiwaWeather' },
@@ -96,7 +103,8 @@ const TABS: TabDef[] = [
   { key: 'api', label: 'Public API', icon: Terminal, sub: 'Summary endpoint', desktopOnly: true },
 ]
 
-const MOBILE_TABS = TABS.filter((t) => !t.desktopOnly)
+const MOBILE_PRIMARY_TABS = TABS.filter((t) => t.mobilePrimary)
+const MOBILE_MORE_TABS = TABS.filter((t) => !t.desktopOnly && !t.mobilePrimary)
 
 function TabLoading({ label }: { label: string }) {
   return (
@@ -111,15 +119,29 @@ function TabLoading({ label }: { label: string }) {
 
 function App() {
   const [tab, setTab] = useState<TabKey>('dashboard')
+  const [moreOpen, setMoreOpen] = useState(false)
   const sectionRef = useRef<HTMLDivElement>(null)
 
   const switchTab = useCallback((key: TabKey) => {
     setTab(key)
+    setMoreOpen(false)
     // Let React render the new tab content, then scroll to it
     requestAnimationFrame(() => {
       sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     })
   }, [])
+
+  // Lock body scroll while the mobile More sheet is open
+  useEffect(() => {
+    if (!moreOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [moreOpen])
+
+  const moreTabActive = MOBILE_MORE_TABS.some((t) => t.key === tab)
 
   return (
     <div className="min-h-screen bg-[#070b16] text-white selection:bg-red-500/30 overflow-x-hidden">
@@ -265,10 +287,11 @@ function App() {
         </div>
       </main>
 
-      {/* Mobile bottom tab bar — a subset of tabs (desktop-only ones excluded) */}
+      {/* Mobile bottom tab bar — 4 primary tabs + a More button that opens
+          a bottom sheet with the rest. Keeps touch targets readable. */}
       <nav className="fixed bottom-0 inset-x-0 z-50 lg:hidden bg-[#070b16]/95 backdrop-blur-md border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-stretch justify-around">
-          {MOBILE_TABS.map(({ key, label, icon: Icon }) => {
+          {MOBILE_PRIMARY_TABS.map(({ key, label, icon: Icon }) => {
             const active = tab === key
             return (
               <button
@@ -280,12 +303,99 @@ function App() {
                 }`}
               >
                 <Icon className={`h-5 w-5 ${active ? 'text-red-400' : ''}`} />
-                <span className="text-[9px] font-bold uppercase tracking-wider">{label}</span>
+                <span className="text-[9px] font-bold uppercase tracking-wider">
+                  {label}
+                </span>
               </button>
             )
           })}
+          <button
+            type="button"
+            onClick={() => setMoreOpen((v) => !v)}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors ${
+              moreTabActive || moreOpen
+                ? 'text-red-400'
+                : 'text-white/40 active:text-white/70'
+            }`}
+            aria-label="More tabs"
+            aria-expanded={moreOpen}
+          >
+            <MoreHorizontal
+              className={`h-5 w-5 ${moreTabActive || moreOpen ? 'text-red-400' : ''}`}
+            />
+            <span className="text-[9px] font-bold uppercase tracking-wider">More</span>
+          </button>
         </div>
       </nav>
+
+      {/* Mobile "More" bottom sheet */}
+      {moreOpen && (
+        <div
+          className="fixed inset-0 z-[60] lg:hidden"
+          onClick={() => setMoreOpen(false)}
+        >
+          {/* backdrop */}
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150" />
+
+          {/* sheet */}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-x-0 bottom-0 bg-[#0a1020] border-t border-white/10 rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom duration-200"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
+          >
+            <div className="flex items-center justify-between px-5 pt-4 pb-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.2em] font-mono font-bold text-white/60">
+                  More tabs
+                </div>
+                <div className="text-[9px] text-white/35 font-mono uppercase tracking-wider">
+                  Tap any to switch
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMoreOpen(false)}
+                className="h-8 w-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 px-4 pb-4">
+              {MOBILE_MORE_TABS.map(({ key, label, icon: Icon, sub }) => {
+                const active = tab === key
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => switchTab(key)}
+                    className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-all active:scale-[0.98] ${
+                      active
+                        ? 'border-red-500/40 bg-red-500/10'
+                        : 'border-white/10 bg-white/[0.02] active:bg-white/[0.06]'
+                    }`}
+                  >
+                    <Icon
+                      className={`h-4 w-4 ${active ? 'text-red-300' : 'text-white/60'}`}
+                    />
+                    <div
+                      className={`text-[11px] font-bold uppercase tracking-wider ${
+                        active ? 'text-white' : 'text-white/85'
+                      }`}
+                    >
+                      {label}
+                    </div>
+                    <div className="text-[9px] font-mono text-white/40 uppercase tracking-wider leading-tight line-clamp-2">
+                      {sub}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="max-w-[1500px] mx-auto px-6 py-8 text-[10px] uppercase tracking-wider text-white/30 font-mono">
         Data: Open-Meteo · MetService · NIWA · Windy.com · adsb.lol · RNZ / Stuff / NZ Herald · AI rollups by Claude Sonnet 4.6 · Built by{' '}
