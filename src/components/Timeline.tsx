@@ -12,6 +12,7 @@ import {
   ChevronRight,
   ChevronDown,
   MessageCircle,
+  Users,
   Heart,
   Repeat2,
   Eye,
@@ -32,6 +33,14 @@ const KIND_META: Record<
   news: { label: 'News', icon: Newspaper },
   liveblog: { label: 'Liveblog', icon: Radio },
   tweet: { label: 'X / Tweet', icon: MessageCircle },
+  fb_post: { label: 'Facebook', icon: Users },
+}
+
+// Facebook CDN URLs ship with required Referer headers and can 403 in
+// browsers that strip the referer. The cyclone-api /fb-image proxy refetches
+// them server-side with the right headers and returns the bytes.
+function fbProxyUrl(raw: string): string {
+  return `https://cyclone-api.thecolab.ai/fb-image?url=${encodeURIComponent(raw)}`
 }
 
 function formatCount(n: number): string {
@@ -39,21 +48,23 @@ function formatCount(n: number): string {
   return String(n)
 }
 
-interface TweetMediaItem {
+interface SocialMediaItem {
   type?: string
-  thumbnail?: string
+  thumbnail?: string | null
   url?: string
 }
 
-interface TweetMeta {
+interface SocialMeta {
   author_name?: string
+  author_handle?: string
   author_category?: string
+  author_description?: string | null
   engagement?: {
     views?: number
     likes?: number
     retweets?: number
-  }
-  media?: TweetMediaItem[] | null
+  } | null
+  media?: SocialMediaItem[] | null
 }
 
 const SEV_BORDER: Record<string, string> = {
@@ -80,6 +91,7 @@ const KIND_CHIP: Record<TimelineKind, string> = {
   outage: 'bg-yellow-500/15 border-yellow-500/40 text-yellow-200',
   river_rise: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-200',
   tweet: 'bg-sky-500/15 border-sky-500/40 text-sky-200',
+  fb_post: 'bg-blue-600/15 border-blue-600/40 text-blue-200',
   liveblog: 'bg-pink-500/15 border-pink-500/40 text-pink-200',
   news: 'bg-violet-500/15 border-violet-500/40 text-violet-200',
 }
@@ -145,9 +157,25 @@ function EventRow({ event }: { event: TimelineEvent }) {
   const Icon = meta.icon
   const hasBody = !!event.body
   const isTweet = event.kind === 'tweet'
-  const tweetMeta = isTweet ? ((event.metadata ?? {}) as TweetMeta) : null
-  const engagement = tweetMeta?.engagement
-  const media = tweetMeta?.media?.filter((m) => m.thumbnail) ?? []
+  const isFbPost = event.kind === 'fb_post'
+  const isSocial = isTweet || isFbPost
+  const socialMeta = isSocial ? ((event.metadata ?? {}) as SocialMeta) : null
+  const engagement = isTweet ? socialMeta?.engagement : null
+  // For X we filter to media that has a thumbnail (videos/GIFs ship with one).
+  // For FB the API returns full-size CDN URLs only — thumbnail is null but
+  // the full URL is fine to render through the proxy.
+  const rawMedia = socialMeta?.media ?? []
+  const media = rawMedia
+    .map((m) => {
+      const src = m.thumbnail || m.url
+      if (!src) return null
+      return {
+        type: m.type ?? 'photo',
+        src: isFbPost ? fbProxyUrl(src) : src,
+        link: m.url ?? src,
+      }
+    })
+    .filter((m): m is { type: string; src: string; link: string } => m !== null)
   const chipClass =
     SEV_CHIP_OVERRIDE[event.severity] ??
     KIND_CHIP[event.kind] ??
@@ -177,15 +205,19 @@ function EventRow({ event }: { event: TimelineEvent }) {
                 <Icon className="h-2.5 w-2.5" />
                 {meta.label}
               </span>
-              {isTweet && tweetMeta?.author_name && (
+              {isSocial && socialMeta?.author_name && (
                 <span className="text-[10px] text-white/85 font-semibold truncate max-w-[200px]">
-                  {tweetMeta.author_name}
+                  {socialMeta.author_name}
                 </span>
               )}
-              {isTweet && event.source && (
-                <span className="text-[9px] font-mono text-sky-400/80">{event.source}</span>
+              {isSocial && socialMeta?.author_handle && (
+                <span
+                  className={`text-[9px] font-mono ${isFbPost ? 'text-blue-400/80' : 'text-sky-400/80'}`}
+                >
+                  {isFbPost ? socialMeta.author_handle : `@${socialMeta.author_handle}`}
+                </span>
               )}
-              {event.region && !isTweet && (
+              {event.region && !isSocial && (
                 <span className="text-[9px] font-mono text-white/40 uppercase tracking-wider">
                   {event.region}
                 </span>
@@ -199,26 +231,28 @@ function EventRow({ event }: { event: TimelineEvent }) {
             </div>
             <div
               className={`text-[13px] leading-snug transition-colors ${
-                isTweet
+                isSocial
                   ? 'text-white/85 font-normal group-hover:text-white/95'
                   : 'text-white/90 font-semibold group-hover:text-white'
               }`}
             >
               {event.title}
             </div>
-            {isTweet && media.length > 0 && (
+            {isSocial && media.length > 0 && (
               <div className="mt-2 flex gap-1.5 flex-wrap">
                 {media.slice(0, 4).map((m, i) => (
                   <a
                     key={i}
-                    href={event.link ?? m.url ?? m.thumbnail}
+                    href={event.link ?? m.link}
                     target="_blank"
                     rel="noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="relative block h-20 w-28 overflow-hidden rounded border border-white/10 bg-white/5 hover:border-sky-400/50 transition-colors"
+                    className={`relative block h-20 w-28 overflow-hidden rounded border border-white/10 bg-white/5 transition-colors ${
+                      isFbPost ? 'hover:border-blue-400/50' : 'hover:border-sky-400/50'
+                    }`}
                   >
                     <img
-                      src={m.thumbnail}
+                      src={m.src}
                       alt=""
                       loading="lazy"
                       className="h-full w-full object-cover"
@@ -265,7 +299,20 @@ function EventRow({ event }: { event: TimelineEvent }) {
                 )}
               </div>
             )}
-            {!isTweet && event.source && (
+            {isFbPost && event.link && (
+              <div className="mt-1.5">
+                <a
+                  href={event.link}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1 text-[9px] font-mono text-blue-400/70 hover:text-blue-300"
+                >
+                  View on Facebook <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+              </div>
+            )}
+            {!isSocial && event.source && (
               <div className="text-[9px] font-mono text-white/35 uppercase tracking-wider mt-0.5">
                 {event.source}
               </div>
@@ -306,6 +353,7 @@ const FILTER_BUTTONS: Array<{ key: FilterKey; label: string }> = [
   { key: 'road_closure', label: 'Roads' },
   { key: 'outage', label: 'Outages' },
   { key: 'tweet', label: 'X / Tweets' },
+  { key: 'fb_post', label: 'Facebook' },
   { key: 'news', label: 'News' },
   { key: 'liveblog', label: 'Liveblog' },
 ]

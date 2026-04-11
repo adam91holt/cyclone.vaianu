@@ -12,6 +12,7 @@ export type TimelineKind =
   | 'news'
   | 'liveblog'
   | 'tweet'
+  | 'fb_post'
 
 export interface TimelineEvent {
   id: string

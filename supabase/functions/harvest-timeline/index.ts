@@ -240,88 +240,123 @@ async function harvestNews(now: string): Promise<TimelineRow[]> {
     }))
 }
 
-// --- X / Twitter feed from NZ official accounts ------------------------
-// cyclone-api.thecolab.ai aggregates posts from ~13 NZ weather / emergency /
-// transport / police accounts. We only include tweets from authoritative
-// accounts (civil defence, police, transport, MetService). For tweets we
-// don't bother storing body — the text is short enough to fit in title and
-// the link goes to X for the full thread/media.
-interface ColabTweetMedia {
+// --- Social feed (X + Facebook) from NZ official accounts -------------
+// cyclone-api.thecolab.ai unifies posts from ~13 NZ weather / emergency /
+// transport / police / council accounts across X and Facebook. The API
+// returns one shape with `source: 'x' | 'facebook'` so we can split here.
+interface ColabSocialMedia {
   type?: string
   url?: string
-  thumbnail?: string
+  thumbnail?: string | null
 }
 
-interface ColabTweet {
+interface ColabSocialPost {
+  source: 'x' | 'facebook'
   id: string
   author: {
     handle: string
     name: string
     category: string
+    description?: string | null
+    profile_image_url?: string | null
   }
   created_at: string
   text: string
   url: string
-  is_reply: boolean
-  engagement?: { likes?: number; retweets?: number; views?: number }
-  media?: ColabTweetMedia[]
+  is_reply?: boolean
+  engagement?: { likes?: number; retweets?: number; views?: number } | null
+  media?: ColabSocialMedia[]
 }
 
-const TWEET_SEVERITY: Record<string, string> = {
+const SOCIAL_SEVERITY: Record<string, string> = {
   civil_defence: 'yellow',
   regional_cdem: 'yellow',
+  local_council: 'yellow',
   police: 'yellow',
   transport: 'info',
   weather: 'info',
 }
 
-async function harvestTweets(now: string): Promise<TimelineRow[]> {
+// Facebook page scrapes ship a lot of UI noise: private-use-area icon glyphs
+// (the FB icon font), repeated author name at the front of every post, and
+// trailing reaction/time markers like "5h" or "Will Kiki and 154 others 󰍸 155".
+// Strip what we can without losing the actual post body.
+function cleanFacebookText(raw: string, authorName: string): string {
+  let t = raw
+    // Drop Private Use Area glyphs (the FB icon font lives here).
+    .replace(/[\uE000-\uF8FF]/g, '')
+    .replace(/[\u{F0000}-\u{FFFFD}]/gu, '')
+    .replace(/[\u{100000}-\u{10FFFD}]/gu, '')
+    // Drop "...see more" continuation markers.
+    .replace(/\.\.\.\s*see more/gi, '')
+    // Collapse whitespace.
+    .replace(/\s+/g, ' ')
+    .trim()
+  // Strip a leading copy of the author name (FB scrapes prepend it).
+  if (authorName && t.startsWith(authorName)) {
+    t = t.slice(authorName.length).trim()
+  }
+  // Strip a trailing "5h", "2d", "5h 12" reaction-and-age tail if present.
+  t = t.replace(/\s+\d+[hdm](?:\s+\d+)?\s*$/i, '').trim()
+  return t
+}
+
+async function harvestSocial(now: string): Promise<TimelineRow[]> {
   const res = await fetch('https://cyclone-api.thecolab.ai/timeline?hours=48', {
     headers: { 'User-Agent': 'vaianu-dashboard/1.0' },
   })
-  if (!res.ok) throw new Error(`tweets: http ${res.status}`)
-  const body = (await res.json()) as { items?: ColabTweet[] }
+  if (!res.ok) throw new Error(`social: http ${res.status}`)
+  const body = (await res.json()) as { items?: ColabSocialPost[] }
   const items = body.items ?? []
   const nowMs = Date.now()
 
   return items
-    .filter((t) => !t.is_reply && t.text && t.created_at)
-    .filter((t) => {
-      const ms = Date.parse(t.created_at)
+    .filter((p) => p.text && p.created_at && !p.is_reply)
+    .filter((p) => {
+      const ms = Date.parse(p.created_at)
       return Number.isFinite(ms) && ms <= nowMs + 60_000
     })
-    .map((t) => {
-      const severity = TWEET_SEVERITY[t.author.category] ?? 'info'
-      // Trim the X-style URL shorteners and pic.twitter links out of the title
-      // so the feed looks clean — the full thread is one click away.
-      const cleanText = t.text
-        .replace(/https:\/\/t\.co\/\w+/g, '')
-        .replace(/\s+/g, ' ')
-        .trim()
-      // Keep only media with a usable thumbnail we can render; videos/GIFs
-      // from the API include a thumbnail frame, so this works for all types.
+    .map((p) => {
+      const isFb = p.source === 'facebook'
+      const severity = SOCIAL_SEVERITY[p.author.category] ?? 'info'
+
+      // Per-platform text cleanup.
+      const cleanText = isFb
+        ? cleanFacebookText(p.text, p.author.name)
+        : p.text
+            .replace(/https:\/\/t\.co\/\w+/g, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+
+      // Media: X provides thumbnails for everything (incl. videos); FB
+      // gives full-size CDN URLs only. The renderer routes FB URLs through
+      // the /fb-image proxy because direct fbcdn fetches can fail with
+      // bad-Referer 403s in some browsers.
       const media =
-        t.media
-          ?.filter((m) => m.thumbnail)
+        p.media
+          ?.filter((m) => m.url || m.thumbnail)
           .map((m) => ({
             type: m.type ?? 'photo',
-            thumbnail: m.thumbnail!,
+            thumbnail: m.thumbnail ?? m.url ?? null,
             url: m.url ?? m.thumbnail!,
           })) ?? []
+
       return {
-        event_key: `tweet:${t.id}`,
-        kind: 'tweet',
+        event_key: isFb ? `fb:${p.id}` : `tweet:${p.id}`,
+        kind: isFb ? 'fb_post' : 'tweet',
         severity,
-        title: cleanText || t.text,
+        title: cleanText || p.text,
         body: null,
-        link: t.url,
-        source: `@${t.author.handle}`,
+        link: p.url,
+        source: isFb ? p.author.name : `@${p.author.handle}`,
         region: null,
-        occurred_at: t.created_at,
+        occurred_at: p.created_at,
         metadata: {
-          author_name: t.author.name,
-          author_category: t.author.category,
-          engagement: t.engagement ?? null,
+          author_name: p.author.name,
+          author_handle: p.author.handle,
+          author_category: p.author.category,
+          author_description: p.author.description ?? null,
+          engagement: p.engagement ?? null,
           media: media.length > 0 ? media : null,
         },
         last_seen_at: now,
@@ -410,13 +445,13 @@ Deno.serve(async (req) => {
       harvestNews(now),
       harvestLiveblog(now),
       harvestNzhLiveblog(now),
-      harvestTweets(now),
+      harvestSocial(now),
     ])
 
     const rows: TimelineRow[] = []
     const errors: string[] = []
     const counts: Record<string, number> = {}
-    const kinds = ['nema', 'warnings', 'roads', 'outages', 'news', 'liveblog', 'nzh_liveblog', 'tweets']
+    const kinds = ['nema', 'warnings', 'roads', 'outages', 'news', 'liveblog', 'nzh_liveblog', 'social']
     results.forEach((r, i) => {
       if (r.status === 'fulfilled') {
         rows.push(...r.value)

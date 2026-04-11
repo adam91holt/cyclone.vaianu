@@ -120,12 +120,13 @@ async function fetchLiveblog(): Promise<
   return data ?? []
 }
 
-// Reads tweets that harvest-timeline has already pulled into timeline_events.
-// These come from NZ official accounts — civil defence, police, transport,
-// MetService — via cyclone-api.thecolab.ai. Ground-truth, high-signal, and
-// time-sensitive.
-async function fetchRecentTweets(): Promise<
+// Reads social posts (X tweets + Facebook posts) that harvest-timeline has
+// already pulled into timeline_events. These come from NZ official accounts —
+// civil defence, police, transport, MetService, councils — via
+// cyclone-api.thecolab.ai. Ground-truth, high-signal, and time-sensitive.
+async function fetchRecentSocial(): Promise<
   Array<{
+    platform: 'x' | 'facebook'
     handle: string | null
     author: string | null
     category: string | null
@@ -136,18 +137,20 @@ async function fetchRecentTweets(): Promise<
   const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
   const { data } = await supabase
     .from('timeline_events')
-    .select('title, source, occurred_at, metadata')
-    .eq('kind', 'tweet')
+    .select('kind, title, source, occurred_at, metadata')
+    .in('kind', ['tweet', 'fb_post'])
     .gte('occurred_at', cutoff)
     .order('occurred_at', { ascending: false })
-    .limit(20)
+    .limit(30)
   return (data ?? []).map((r) => {
     const meta = (r.metadata ?? {}) as {
       author_name?: string
+      author_handle?: string
       author_category?: string
     }
     return {
-      handle: r.source,
+      platform: r.kind === 'fb_post' ? ('facebook' as const) : ('x' as const),
+      handle: meta.author_handle ?? r.source,
       author: meta.author_name ?? null,
       category: meta.author_category ?? null,
       text: r.title,
@@ -300,7 +303,7 @@ Deno.serve(async (req) => {
         fetchMetServiceWarnings(),
         fetchLiveblog(),
         fetchNiwaForecast(),
-        fetchRecentTweets(),
+        fetchRecentSocial(),
         fetchCyclonePositionFromPressure(),
       ])
 
@@ -379,9 +382,10 @@ Deno.serve(async (req) => {
               })
             : 'recent'
           const cat = t.category ? ` · ${t.category}` : ''
-          return `- [${when}${cat}] ${t.handle ?? ''}: ${t.text ?? ''}`
+          const platform = t.platform === 'facebook' ? 'FB' : 'X'
+          return `- [${when} · ${platform}${cat}] ${t.handle ?? ''}: ${t.text ?? ''}`
         })
-        .join('\n') || '(no recent official tweets)'
+        .join('\n') || '(no recent official social posts)'
 
     const prompt = `You are a concise, factual weather briefing writer for a public emergency dashboard covering Tropical Cyclone Vaianu — a Category 2 sub-tropical cyclone approaching the northeast coast of New Zealand's North Island.
 
@@ -400,7 +404,7 @@ ${niwaBlock}
 STUFF LIVE BLOG (rolling coverage, most recent first):
 ${liveblogBlock}
 
-X / TWITTER — NZ OFFICIAL ACCOUNTS (civil defence, police, transport, MetService):
+SOCIAL — NZ OFFICIAL ACCOUNTS on X and Facebook (civil defence, police, transport, MetService, councils):
 ${tweetsBlock}
 
 RECENT NEWS (RNZ, Stuff, NZH):
