@@ -9,7 +9,9 @@ export function useCountdown(targetIso: string) {
   }, [])
 
   const target = new Date(targetIso).getTime()
-  const delta = Math.max(0, target - now)
+  const signed = target - now
+  const isPast = signed <= 0
+  const delta = Math.abs(signed)
 
   const hours = Math.floor(delta / 3_600_000)
   const minutes = Math.floor((delta % 3_600_000) / 60_000)
@@ -18,11 +20,11 @@ export function useCountdown(targetIso: string) {
   const pad = (n: number) => n.toString().padStart(2, '0')
 
   return {
-    total: delta,
+    total: signed,
     hours,
     minutes,
     seconds,
     formatted: `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`,
-    isPast: delta === 0,
+    isPast,
   }
 }
