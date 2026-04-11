@@ -124,6 +124,32 @@ const TABS: TabDef[] = [
 const MOBILE_PRIMARY_TABS = TABS.filter((t) => t.mobilePrimary)
 const MOBILE_MORE_TABS = TABS.filter((t) => !t.desktopOnly && !t.mobilePrimary)
 
+const VALID_TAB_KEYS: ReadonlySet<string> = new Set(TABS.map((t) => t.key))
+
+/** Parse the URL hash into a valid TabKey, or null for dashboard/admin/unknown. */
+function tabFromHash(): TabKey | null {
+  if (typeof window === 'undefined') return null
+  const raw = window.location.hash.replace(/^#/, '')
+  if (!raw || raw === 'admin') return null
+  return VALID_TAB_KEYS.has(raw) ? (raw as TabKey) : null
+}
+
+/** Write a TabKey to window.location.hash without triggering navigation. */
+function writeTabHash(key: TabKey) {
+  if (typeof window === 'undefined') return
+  const current = window.location.hash.replace(/^#/, '')
+  // Dashboard is the default — clear the hash for a cleaner URL.
+  if (key === 'dashboard') {
+    if (current && current !== 'admin') {
+      window.history.pushState(null, '', window.location.pathname + window.location.search)
+    }
+    return
+  }
+  if (current !== key) {
+    window.history.pushState(null, '', `#${key}`)
+  }
+}
+
 function TabLoading({ label }: { label: string }) {
   return (
     <div className="bg-[#0f1729]/80 border border-white/10 rounded-lg h-[520px] flex items-center justify-center">
@@ -136,34 +162,45 @@ function TabLoading({ label }: { label: string }) {
 }
 
 function App() {
-  const [tab, setTab] = useState<TabKey>('dashboard')
+  // Initialize tab from the URL hash so deep links work on first paint.
+  const [tab, setTab] = useState<TabKey>(() => tabFromHash() ?? 'dashboard')
   const [moreOpen, setMoreOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState(
     () => typeof window !== 'undefined' && window.location.hash === '#admin',
   )
   const sectionRef = useRef<HTMLDivElement>(null)
 
-  // #admin in the URL bar flips us into the moderation view.
-  useEffect(() => {
-    function onHashChange() {
-      setIsAdmin(window.location.hash === '#admin')
-    }
-    window.addEventListener('hashchange', onHashChange)
-    return () => window.removeEventListener('hashchange', onHashChange)
-  }, [])
-
-  if (isAdmin) {
-    return <AdminReports />
-  }
-
   const switchTab = useCallback((key: TabKey) => {
     setTab(key)
     setMoreOpen(false)
+    writeTabHash(key)
     // Let React render the new tab content, then scroll to it
     requestAnimationFrame(() => {
       sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     })
   }, [])
+
+  // Watch the URL hash for both #admin (moderation view) and #<tab> deep
+  // links. Back/forward buttons trigger hashchange, so the browser history
+  // navigates between tabs naturally.
+  useEffect(() => {
+    function onHashChange() {
+      const hash = window.location.hash
+      if (hash === '#admin') {
+        setIsAdmin(true)
+        return
+      }
+      if (isAdmin) setIsAdmin(false)
+      const parsed = tabFromHash()
+      setTab(parsed ?? 'dashboard')
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [isAdmin])
+
+  if (isAdmin) {
+    return <AdminReports />
+  }
 
   // Lock body scroll while the mobile More sheet is open
   useEffect(() => {
