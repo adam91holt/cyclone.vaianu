@@ -17,6 +17,7 @@ import {
   MoreHorizontal,
   X,
   Camera,
+  Shield,
 } from 'lucide-react'
 import { AlertBar } from '@/components/AlertBar'
 import { Header } from '@/components/Header'
@@ -46,6 +47,8 @@ import { SignupPopup } from '@/components/SignupPopup'
 import { CrowdReports } from '@/components/CrowdReports'
 import { AdminReports } from '@/components/AdminReports'
 import { SubmitReportFab } from '@/components/SubmitReportFab'
+import { TopReports } from '@/components/TopReports'
+import { EvacuationCentres } from '@/components/EvacuationCentres'
 // Lazy-loaded — each carries a heavy dependency (hls.js, leaflet,
 // react-markdown) we don't want on the critical path.
 const WebcamsPanel = lazy(() =>
@@ -73,6 +76,7 @@ type TabKey =
   | 'weather'
   | 'webcams'
   | 'outages'
+  | 'shelters'
   | 'roads'
   | 'rivers'
   | 'reports'
@@ -104,6 +108,7 @@ const TABS: TabDef[] = [
   { key: 'weather', label: 'Warnings', icon: CloudRain, sub: 'MetService + Open-Meteo', mobilePrimary: true },
   { key: 'webcams', label: 'Webcams', icon: Video, sub: 'Live landfall zone' },
   { key: 'outages', label: 'Outages', icon: Zap, sub: 'Power · live', mobilePrimary: true },
+  { key: 'shelters', label: 'Shelters', icon: Shield, sub: 'Welfare centres' },
   { key: 'roads', label: 'Roads', icon: Construction, sub: 'NZTA · live' },
   { key: 'rivers', label: 'Rivers', icon: Waves, sub: '1,700+ gauges · 10m' },
   { key: 'niwa', label: 'NIWA', icon: CloudSun, sub: '8-day + @NiwaWeather' },
@@ -235,14 +240,17 @@ function App() {
 
           <section ref={sectionRef} className="lg:col-span-10 min-w-0 space-y-3 scroll-mt-4">
             {tab === 'dashboard' && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                <div className="lg:col-span-9">
-                  <CycloneMap />
+              <>
+                <TopReports onOpenReports={() => switchTab('reports')} />
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                  <div className="lg:col-span-9">
+                    <CycloneMap />
+                  </div>
+                  <div className="lg:col-span-3">
+                    <RegionsPanel />
+                  </div>
                 </div>
-                <div className="lg:col-span-3">
-                  <RegionsPanel />
-                </div>
-              </div>
+              </>
             )}
 
             {tab === 'timeline' && <Timeline />}
@@ -273,6 +281,8 @@ function App() {
                 <OutagesMap />
               </Suspense>
             )}
+
+            {tab === 'shelters' && <EvacuationCentres />}
 
             {tab === 'roads' && (
               <Suspense fallback={<TabLoading label="Loading road events…" />}>
