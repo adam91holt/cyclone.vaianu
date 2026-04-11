@@ -330,8 +330,9 @@ function App() {
       </main>
 
       {/* Mobile bottom tab bar — 4 primary tabs + a More button that opens
-          a bottom sheet with the rest. Keeps touch targets readable. */}
-      <nav className="fixed bottom-0 inset-x-0 z-50 lg:hidden bg-[#070b16]/95 backdrop-blur-md border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
+          a bottom sheet with the rest. Keeps touch targets readable.
+          z-[1500] so it sits above Leaflet's internal control layer (z-1000). */}
+      <nav className="fixed bottom-0 inset-x-0 z-[1500] lg:hidden bg-[#070b16]/95 backdrop-blur-md border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-stretch justify-around">
           {MOBILE_PRIMARY_TABS.map(({ key, label, icon: Icon }) => {
             const active = tab === key
@@ -370,10 +371,12 @@ function App() {
         </div>
       </nav>
 
-      {/* Mobile "More" bottom sheet */}
+      {/* Mobile "More" bottom sheet — z-[2000] to clear Leaflet's
+          internal control layer (z-1000) when opened from the Outages
+          or Rivers tabs. */}
       {moreOpen && (
         <div
-          className="fixed inset-0 z-[60] lg:hidden"
+          className="fixed inset-0 z-[2000] lg:hidden"
           onClick={() => setMoreOpen(false)}
         >
           {/* backdrop */}
@@ -439,7 +442,7 @@ function App() {
         </div>
       )}
 
-      <footer className="max-w-[1500px] mx-auto px-6 py-8 text-[10px] uppercase tracking-wider text-white/30 font-mono">
+      <footer className="max-w-[1500px] mx-auto px-6 pt-8 pb-[calc(7rem+env(safe-area-inset-bottom))] lg:pb-8 text-[10px] uppercase tracking-wider text-white/30 font-mono">
         Data: Open-Meteo · MetService · NIWA · Windy.com · adsb.lol · RNZ / Stuff / NZ Herald · AI rollups by Claude Sonnet 4.6 · Built by{' '}
         <a
           href="https://thecolab.ai/"
