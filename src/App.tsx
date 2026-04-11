@@ -173,7 +173,7 @@ function App() {
     <RegionProvider>
     <div className="min-h-screen bg-[#070b16] text-white selection:bg-red-500/30 overflow-x-hidden">
       <AlertBar />
-      <Header />
+      <Header hideShareMobileFab={tab === 'reports'} />
       <NewsTicker />
 
       <main className="mx-auto max-w-[1500px] px-4 sm:px-6 py-5 pb-24 lg:pb-5 space-y-4">
@@ -440,7 +440,7 @@ function App() {
           thecolab.ai
         </a>
       </footer>
-      <SubmitReportFab />
+      <SubmitReportFab hidden={tab === 'reports'} />
       <SignupPopup />
     </div>
     </RegionProvider>

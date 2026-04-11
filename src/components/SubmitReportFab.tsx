@@ -8,8 +8,16 @@ import { SubmitReportModal } from '@/components/SubmitReportModal'
  * across from the ShareButton FAB which lives at bottom-right. Both
  * are offset upwards so they clear the fixed mobile tab bar.
  */
-export function SubmitReportFab() {
+interface SubmitReportFabProps {
+  /** Hide the floating button (e.g. on the Ground Reports tab where
+   *  the submit flow is already in the main content). */
+  hidden?: boolean
+}
+
+export function SubmitReportFab({ hidden }: SubmitReportFabProps = {}) {
   const [open, setOpen] = useState(false)
+
+  if (hidden) return null
 
   return (
     <>
