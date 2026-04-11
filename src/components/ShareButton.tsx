@@ -308,7 +308,7 @@ export function ShareButton({ hideMobileFab }: ShareButtonProps = {}) {
         Share
       </button>
 
-      {/* Mobile: floating action button anchored bottom-right, safe-area
+      {/* Mobile: compact floating button anchored bottom-right, safe-area
           aware. Offset upwards so it sits above the fixed bottom tab bar.
           Can be suppressed on specific tabs via hideMobileFab. */}
       {!hideMobileFab && (
@@ -316,13 +316,13 @@ export function ShareButton({ hideMobileFab }: ShareButtonProps = {}) {
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Share"
-          className="sm:hidden fixed z-[90] h-14 w-14 rounded-full border border-red-400/50 bg-red-600 text-white shadow-[0_8px_24px_rgba(239,68,68,0.45),0_2px_8px_rgba(0,0,0,0.6)] active:scale-95 active:bg-red-500 hover:bg-red-500 transition-all flex items-center justify-center ring-4 ring-red-500/15 hover:ring-red-500/30"
+          className="sm:hidden fixed z-[90] h-10 w-10 rounded-full border border-red-500/30 bg-[#0a0f1e]/85 backdrop-blur-md text-red-300 hover:text-red-200 hover:border-red-500/50 active:scale-95 active:bg-[#0a0f1e] shadow-md shadow-black/40 transition-all flex items-center justify-center"
           style={{
-            right: 'max(1rem, env(safe-area-inset-right))',
+            right: 'max(0.75rem, env(safe-area-inset-right))',
             bottom: 'calc(4.5rem + env(safe-area-inset-bottom))',
           }}
         >
-          <Share2 className="h-5 w-5" strokeWidth={2.4} />
+          <Share2 className="h-4 w-4" strokeWidth={2} />
         </button>
       )}
 
