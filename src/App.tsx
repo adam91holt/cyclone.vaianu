@@ -98,7 +98,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { key: 'dashboard', label: 'Live Map', icon: LayoutDashboard, sub: 'Windy + regions', mobilePrimary: true },
-  { key: 'reports', label: 'Ground Reports', icon: Camera, sub: 'Submit + photos' },
+  { key: 'reports', label: 'Eyes On', icon: Camera, sub: 'Ground reports + photos', mobilePrimary: true },
   { key: 'timeline', label: 'Timeline', icon: Clock, sub: 'Notable events · live' },
   { key: 'report', label: 'Opus Report', icon: Sparkles, sub: 'Hourly · Claude Opus 4.6', mobilePrimary: true },
   { key: 'weather', label: 'Warnings', icon: CloudRain, sub: 'MetService + Open-Meteo', mobilePrimary: true },
