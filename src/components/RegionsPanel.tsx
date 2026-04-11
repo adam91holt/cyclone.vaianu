@@ -1,9 +1,11 @@
 import { REGIONS, WARNING_COLORS } from '@/lib/cyclone'
 import { useRegionWeather } from '@/hooks/useWeather'
+import { useLiveRegionWarnings } from '@/hooks/useLiveRegionWarnings'
 import { AlertTriangle } from 'lucide-react'
 
 export function RegionsPanel() {
   const { data } = useRegionWeather()
+  const liveWarnings = useLiveRegionWarnings()
 
   return (
     <div className="bg-[#0f1729]/80 border border-white/10 rounded-lg p-4">
@@ -16,7 +18,8 @@ export function RegionsPanel() {
       <div className="space-y-2.5">
         {REGIONS.map((region) => {
           const w = data?.find((r) => r.regionId === region.id)
-          const color = WARNING_COLORS[region.warning]
+          const live = liveWarnings[region.id]
+          const color = WARNING_COLORS[live?.level ?? region.warning]
           return (
             <div
               key={region.id}
@@ -39,6 +42,11 @@ export function RegionsPanel() {
                 <div className="text-[10px] text-white/50 line-clamp-1">
                   {region.impact}
                 </div>
+                {live && live.events.length > 0 && (
+                  <div className="text-[9px] font-mono text-white/35 uppercase tracking-wider mt-0.5">
+                    {live.events.join(' · ')}
+                  </div>
+                )}
               </div>
             </div>
           )

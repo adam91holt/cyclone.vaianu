@@ -1,9 +1,11 @@
 import { useRegionWeather } from '@/hooks/useWeather'
+import { useLiveRegionWarnings } from '@/hooks/useLiveRegionWarnings'
 import { REGIONS, WARNING_COLORS } from '@/lib/cyclone'
 import { ArrowUp } from 'lucide-react'
 
 export function RegionalWeather() {
   const { data, isLoading, dataUpdatedAt } = useRegionWeather()
+  const liveWarnings = useLiveRegionWarnings()
 
   return (
     <div className="bg-[#0f1729]/80 border border-white/10 rounded-lg p-4">
@@ -23,7 +25,8 @@ export function RegionalWeather() {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {REGIONS.map((region) => {
           const w = data?.find((r) => r.regionId === region.id)
-          const color = WARNING_COLORS[region.warning]
+          const live = liveWarnings[region.id]
+          const color = WARNING_COLORS[live?.level ?? region.warning]
           return (
             <div
               key={region.id}

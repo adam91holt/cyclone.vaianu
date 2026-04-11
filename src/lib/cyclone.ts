@@ -10,11 +10,15 @@ export interface Region {
   short: string
   lat: number
   lon: number
+  /** Fallback severity if no live MetService warning matches — hand-curated. */
   warning: WarningLevel
   impact: string
   /** SVG space coordinates for the NZ map (see CycloneMap.tsx viewBox) */
   mapX: number
   mapY: number
+  /** MetService fine-grained region names that roll up into this region. Used to
+   * compute the live warning level from metservice_warnings_national.regions[]. */
+  aliases: string[]
 }
 
 export const REGIONS: Region[] = [
@@ -28,6 +32,7 @@ export const REGIONS: Region[] = [
     impact: 'State of emergency declared. Life-threatening winds & flooding.',
     mapX: 185,
     mapY: 60,
+    aliases: ['Northland'],
   },
   {
     id: 'auckland',
@@ -39,6 +44,7 @@ export const REGIONS: Region[] = [
     impact: 'Harbour Bridge closure likely. Severe gales, 130km/h gusts.',
     mapX: 200,
     mapY: 105,
+    aliases: ['Auckland', 'Great Barrier Island'],
   },
   {
     id: 'coromandel',
@@ -50,6 +56,7 @@ export const REGIONS: Region[] = [
     impact: 'Direct impact zone. Gusts to 140km/h, heavy rain, storm surge.',
     mapX: 228,
     mapY: 112,
+    aliases: ['Coromandel Peninsula'],
   },
   {
     id: 'bay_of_plenty',
@@ -61,6 +68,7 @@ export const REGIONS: Region[] = [
     impact: 'Damaging winds, coastal inundation risk for Tauranga.',
     mapX: 245,
     mapY: 140,
+    aliases: ['Bay Of Plenty', 'Rotorua'],
   },
   {
     id: 'waikato',
@@ -72,6 +80,7 @@ export const REGIONS: Region[] = [
     impact: 'Severe gales. River & surface flooding possible.',
     mapX: 210,
     mapY: 150,
+    aliases: ['Waikato', 'Waitomo', 'Taumarunui', 'Taupo'],
   },
   {
     id: 'gisborne',
@@ -83,6 +92,7 @@ export const REGIONS: Region[] = [
     impact: 'Strong southeasterlies, possible slips on SH35.',
     mapX: 270,
     mapY: 175,
+    aliases: ['Gisborne'],
   },
 ]
 

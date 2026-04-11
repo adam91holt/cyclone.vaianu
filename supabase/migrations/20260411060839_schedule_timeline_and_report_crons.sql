@@ -14,11 +14,10 @@ select cron.schedule(
   $$
 );
 
--- Generate the comprehensive Opus report every hour, 3 minutes past.
--- We offset so all the 5-minute harvests have settled.
+-- Generate the comprehensive Opus report on the hour, every hour.
 select cron.schedule(
   'vaianu-comprehensive-report-hourly',
-  '3 * * * *',
+  '0 * * * *',
   $$
   select net.http_post(
     url := 'https://frqzgozrmtcfgnoobtvo.supabase.co/functions/v1/generate-comprehensive-report',

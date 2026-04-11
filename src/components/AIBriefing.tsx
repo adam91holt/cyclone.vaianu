@@ -1,11 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLatestSummary } from '@/hooks/useSummary'
-import { Sparkles, ArrowRight } from 'lucide-react'
-
-interface AIBriefingProps {
-  /** Called when the user clicks "Read the full Opus report" CTA. */
-  onReadFullReport?: () => void
-}
+import { useComprehensiveReports } from '@/hooks/useComprehensiveReports'
+import { Sparkles, ArrowRight, BookOpen } from 'lucide-react'
 
 function timeAgo(iso: string) {
   const delta = Math.max(0, Date.now() - new Date(iso).getTime())
@@ -32,8 +28,14 @@ function useNextTick(intervalMin: number, lastIso: string | null) {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
-export function AIBriefing({ onReadFullReport }: AIBriefingProps = {}) {
+interface AIBriefingProps {
+  onOpenReport?: () => void
+}
+
+export function AIBriefing({ onOpenReport }: AIBriefingProps) {
   const { data: summary, isLoading } = useLatestSummary()
+  const { data: reports } = useComprehensiveReports(1)
+  const latestReport = reports?.[0]
   const nextIn = useNextTick(15, summary?.generated_at ?? null)
 
   const severityStyles: Record<string, string> = {
@@ -107,26 +109,29 @@ export function AIBriefing({ onReadFullReport }: AIBriefingProps = {}) {
             ))}
           </ul>
 
-          {onReadFullReport && (
+          {latestReport && onOpenReport && (
             <button
               type="button"
-              onClick={onReadFullReport}
-              className="group mt-4 w-full sm:w-auto flex items-center justify-between sm:justify-start gap-3 rounded-lg border border-white/15 bg-white/[0.04] hover:bg-white/[0.10] hover:border-white/30 transition-all px-4 py-2.5 text-left"
+              onClick={onOpenReport}
+              className="mt-4 w-full group flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 transition-colors px-3.5 py-2.5 text-left"
             >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-violet-500/30 to-fuchsia-500/20 border border-white/10 shrink-0">
-                  <Sparkles className="h-3 w-3 text-violet-200" />
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 group-hover:bg-white/15 transition-colors">
+                <BookOpen className="h-3.5 w-3.5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[9px] uppercase tracking-[0.2em] text-white/50 font-mono font-bold">
+                    Deep Dive · Opus 4.6
+                  </span>
+                  <span className="text-[9px] font-mono text-white/35 tabular-nums">
+                    {timeAgo(latestReport.generated_at)}
+                  </span>
                 </div>
-                <div className="min-w-0">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-white/90 truncate">
-                    Read the full hourly report
-                  </div>
-                  <div className="text-[9px] font-mono text-white/45 uppercase tracking-wider">
-                    Deeper analysis · Claude Opus 4.6
-                  </div>
+                <div className="text-[12px] text-white/90 font-semibold leading-snug line-clamp-1">
+                  {latestReport.headline}
                 </div>
               </div>
-              <ArrowRight className="h-4 w-4 text-white/50 group-hover:text-white group-hover:translate-x-0.5 transition-all shrink-0" />
+              <ArrowRight className="h-4 w-4 text-white/40 group-hover:text-white/90 group-hover:translate-x-0.5 transition-all shrink-0" />
             </button>
           )}
         </>
