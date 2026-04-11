@@ -65,6 +65,41 @@ export type Database = {
         }
         Relationships: []
       }
+      crowd_report_votes: {
+        Row: {
+          created_at: string | null
+          id: string
+          report_id: string
+          updated_at: string | null
+          vote: number
+          voter_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          report_id: string
+          updated_at?: string | null
+          vote: number
+          voter_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          report_id?: string
+          updated_at?: string | null
+          vote?: number
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crowd_report_votes_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "crowd_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crowd_reports: {
         Row: {
           created_at: string | null
@@ -79,6 +114,7 @@ export type Database = {
           status: string
           submitter_name: string | null
           user_agent: string | null
+          vote_score: number
         }
         Insert: {
           created_at?: string | null
@@ -93,6 +129,7 @@ export type Database = {
           status?: string
           submitter_name?: string | null
           user_agent?: string | null
+          vote_score?: number
         }
         Update: {
           created_at?: string | null
@@ -107,6 +144,7 @@ export type Database = {
           status?: string
           submitter_name?: string | null
           user_agent?: string | null
+          vote_score?: number
         }
         Relationships: []
       }
