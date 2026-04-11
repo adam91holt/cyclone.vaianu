@@ -9,6 +9,7 @@ import {
   CloudSun,
   Video,
   Zap,
+  Construction,
 } from 'lucide-react'
 import { AlertBar } from '@/components/AlertBar'
 import { Header } from '@/components/Header'
@@ -30,6 +31,7 @@ import { NiwaForecast } from '@/components/NiwaForecast'
 import { NiwaTweets } from '@/components/NiwaTweets'
 import { StuffLiveblog } from '@/components/StuffLiveblog'
 import { FeedHealth } from '@/components/FeedHealth'
+import { CivilDefenceAlerts } from '@/components/CivilDefenceAlerts'
 // Lazy-loaded — each carries a heavy dependency (hls.js, leaflet) we don't
 // want on the critical path.
 const WebcamsPanel = lazy(() =>
@@ -38,12 +40,16 @@ const WebcamsPanel = lazy(() =>
 const OutagesMap = lazy(() =>
   import('@/components/OutagesMap').then((m) => ({ default: m.OutagesMap })),
 )
+const RoadEventsMap = lazy(() =>
+  import('@/components/RoadEventsMap').then((m) => ({ default: m.RoadEventsMap })),
+)
 
 type TabKey =
   | 'dashboard'
   | 'weather'
   | 'webcams'
   | 'outages'
+  | 'roads'
   | 'niwa'
   | 'flights'
   | 'news'
@@ -64,6 +70,7 @@ const TABS: TabDef[] = [
   { key: 'weather', label: 'Warnings', icon: CloudRain, sub: 'MetService + Open-Meteo' },
   { key: 'webcams', label: 'Webcams', icon: Video, sub: 'Live landfall zone' },
   { key: 'outages', label: 'Outages', icon: Zap, sub: 'Power · live' },
+  { key: 'roads', label: 'Roads', icon: Construction, sub: 'NZTA · live' },
   { key: 'niwa', label: 'NIWA', icon: CloudSun, sub: '8-day + @NiwaWeather' },
   { key: 'flights', label: 'Flights', icon: Plane, sub: 'Live ADS-B', desktopOnly: true },
   { key: 'news', label: 'News', icon: Newspaper, sub: 'RNZ · Stuff · NZH' },
@@ -173,6 +180,7 @@ function App() {
 
             {tab === 'weather' && (
               <>
+                <CivilDefenceAlerts />
                 <MetServiceNationalWarnings />
                 <RegionalWeather />
                 <WeatherCharts />
@@ -188,6 +196,12 @@ function App() {
             {tab === 'outages' && (
               <Suspense fallback={<TabLoading label="Loading outages map…" />}>
                 <OutagesMap />
+              </Suspense>
+            )}
+
+            {tab === 'roads' && (
+              <Suspense fallback={<TabLoading label="Loading road events…" />}>
+                <RoadEventsMap />
               </Suspense>
             )}
 
