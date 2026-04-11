@@ -128,6 +128,30 @@ export type Database = {
         }
         Relationships: []
       }
+      email_signups: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          referrer: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          referrer?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          referrer?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       feedback: {
         Row: {
           created_at: string
