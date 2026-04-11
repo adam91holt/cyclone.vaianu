@@ -219,9 +219,12 @@ Deno.serve(async (req) => {
             w.threat_start_time && w.threat_end_time
               ? `${new Date(w.threat_start_time).toLocaleString('en-NZ', { timeZone: 'Pacific/Auckland', weekday: 'short', hour: '2-digit', minute: '2-digit' })} → ${new Date(w.threat_end_time).toLocaleString('en-NZ', { timeZone: 'Pacific/Auckland', weekday: 'short', hour: '2-digit', minute: '2-digit' })}`
               : 'ongoing'
+          const isoStart = w.threat_start_time
+            ? new Date(w.threat_start_time).toISOString()
+            : 'unknown'
           const regions = (w.display_regions ?? []).join(', ') || '—'
           const stmt = (w.situation_statement ?? '').slice(0, 400)
-          return `- [${w.warn_level?.toUpperCase() ?? '—'} · ${w.event_type ?? '—'}] ${regions} (${period})${stmt ? `\n  ${stmt}` : ''}`
+          return `- [${w.warn_level?.toUpperCase() ?? '—'} · ${w.event_type ?? '—'}] ${regions} (${period}) start_iso=${isoStart}${stmt ? `\n  ${stmt}` : ''}`
         })
         .join('\n') || '(no active warnings)'
 
@@ -297,13 +300,14 @@ Rules for the briefing:
 - severity reflects the highest active warning level across regions.
 
 Rules for the landfall estimate (CRITICAL — this drives a live countdown on the dashboard):
-- Prefer MetService threat_start_time for the hardest-hit red-warning region, if present. That's the most authoritative clue.
-- Cross-check with NIWA forecast and the most recent news/liveblog mentions of expected landfall.
-- If sources conflict, go with MetService and lower confidence to "medium".
-- If no source gives a specific time, use your best judgement from wind trends + cyclone motion and mark confidence "low".
-- The landfall_iso MUST be a real ISO8601 UTC timestamp (e.g. 2026-04-11T18:00:00Z). It MUST be in the future relative to "Current time (UTC ISO)" above unless landfall has already passed, in which case it may be in the past by at most 12 hours.
-- "region" should name the primary impact zone (the place where the eye crosses the coast).
-- Do NOT simply copy a placeholder. Think about the actual evidence.
+- "Landfall" for this dashboard means: when damaging cyclone conditions BEGIN at the coast — not the middle or peak of the warning, not the calm eye passing. The moment the red warning start_iso fires, landfall has effectively begun.
+- DEFAULT RULE: find the earliest active RED warning (any event_type — wind, rain, swell) and COPY its start_iso value VERBATIM into landfall_iso. Do NOT round, shift, or "average" it with other warnings. Confidence: "high".
+- If NO red warning is active, fall back to the earliest active ORANGE warning's start_iso. Confidence: "medium".
+- Only deviate from the earliest red/orange start_iso if NIWA or news explicitly give an earlier landfall time — in that case use the earlier one and drop confidence to "medium".
+- NEVER pick a landfall time LATER than the earliest active red warning's start_iso. The warning onset is your ceiling.
+- The landfall_iso MUST be a real ISO8601 UTC timestamp (e.g. 2026-04-11T10:00:00Z). It MUST be in the future relative to "Current time (UTC ISO)" above unless landfall has already passed, in which case it may be in the past by at most 12 hours.
+- "region" should name the primary impact zone (the place where the eye crosses the coast) — use the display_regions of the red warning you anchored to.
+- In "rationale", name the specific warning you anchored to and its start_iso, e.g. "Anchored to RED wind warning upper-north start_iso=2026-04-11T10:00:00Z".
 
 Rules for ratings (be calibrated, not inflated):
 - 1-3 = normal weather, no meaningful risk

@@ -8,6 +8,7 @@ import {
   Terminal,
   CloudSun,
   Video,
+  Zap,
 } from 'lucide-react'
 import { AlertBar } from '@/components/AlertBar'
 import { Header } from '@/components/Header'
@@ -30,26 +31,41 @@ import { NiwaTweets } from '@/components/NiwaTweets'
 import { StuffLiveblog } from '@/components/StuffLiveblog'
 import { FeedHealth } from '@/components/FeedHealth'
 import { WebcamsPanel } from '@/components/WebcamsPanel'
+import { OutagesMap } from '@/components/OutagesMap'
 
-type TabKey = 'dashboard' | 'weather' | 'webcams' | 'niwa' | 'flights' | 'news' | 'archive' | 'api'
+type TabKey =
+  | 'dashboard'
+  | 'weather'
+  | 'webcams'
+  | 'outages'
+  | 'niwa'
+  | 'flights'
+  | 'news'
+  | 'archive'
+  | 'api'
 
 interface TabDef {
   key: TabKey
   label: string
   icon: React.ComponentType<{ className?: string }>
   sub: string
+  /** Hide from the mobile bottom bar (still shown in the desktop sidebar) */
+  desktopOnly?: boolean
 }
 
 const TABS: TabDef[] = [
   { key: 'dashboard', label: 'Live Map', icon: LayoutDashboard, sub: 'Windy + regions' },
   { key: 'weather', label: 'Warnings', icon: CloudRain, sub: 'MetService + Open-Meteo' },
   { key: 'webcams', label: 'Webcams', icon: Video, sub: 'Live landfall zone' },
+  { key: 'outages', label: 'Outages', icon: Zap, sub: 'Power · live' },
   { key: 'niwa', label: 'NIWA', icon: CloudSun, sub: '8-day + @NiwaWeather' },
-  { key: 'flights', label: 'Flights', icon: Plane, sub: 'Live ADS-B' },
+  { key: 'flights', label: 'Flights', icon: Plane, sub: 'Live ADS-B', desktopOnly: true },
   { key: 'news', label: 'News', icon: Newspaper, sub: 'RNZ · Stuff · NZH' },
   { key: 'archive', label: 'Archive', icon: History, sub: 'All AI reports' },
-  { key: 'api', label: 'Public API', icon: Terminal, sub: 'Summary endpoint' },
+  { key: 'api', label: 'Public API', icon: Terminal, sub: 'Summary endpoint', desktopOnly: true },
 ]
+
+const MOBILE_TABS = TABS.filter((t) => !t.desktopOnly)
 
 function App() {
   const [tab, setTab] = useState<TabKey>('dashboard')
@@ -148,6 +164,8 @@ function App() {
 
             {tab === 'webcams' && <WebcamsPanel />}
 
+            {tab === 'outages' && <OutagesMap />}
+
             {tab === 'niwa' && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <NiwaForecast />
@@ -176,10 +194,10 @@ function App() {
         </div>
       </main>
 
-      {/* Mobile bottom tab bar */}
+      {/* Mobile bottom tab bar — a subset of tabs (desktop-only ones excluded) */}
       <nav className="fixed bottom-0 inset-x-0 z-50 lg:hidden bg-[#070b16]/95 backdrop-blur-md border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-stretch justify-around">
-          {TABS.map(({ key, label, icon: Icon }) => {
+          {MOBILE_TABS.map(({ key, label, icon: Icon }) => {
             const active = tab === key
             return (
               <button

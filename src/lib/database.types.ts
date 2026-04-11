@@ -395,6 +395,105 @@ export type Database = {
         }
         Relationships: []
       }
+      power_outages: {
+        Row: {
+          cause: string | null
+          centroid_lat: number | null
+          centroid_lon: number | null
+          cleared_at: string | null
+          customer_count: number | null
+          end_time: string | null
+          equipment: string | null
+          first_seen_at: string
+          geometry: Json | null
+          incident_id: string
+          last_seen_at: string
+          localities: string[] | null
+          notes: string | null
+          provider: string
+          region: string | null
+          restoration_hint: string | null
+          service: string
+          start_time: string | null
+          status: string
+          title: string | null
+        }
+        Insert: {
+          cause?: string | null
+          centroid_lat?: number | null
+          centroid_lon?: number | null
+          cleared_at?: string | null
+          customer_count?: number | null
+          end_time?: string | null
+          equipment?: string | null
+          first_seen_at?: string
+          geometry?: Json | null
+          incident_id: string
+          last_seen_at?: string
+          localities?: string[] | null
+          notes?: string | null
+          provider: string
+          region?: string | null
+          restoration_hint?: string | null
+          service?: string
+          start_time?: string | null
+          status?: string
+          title?: string | null
+        }
+        Update: {
+          cause?: string | null
+          centroid_lat?: number | null
+          centroid_lon?: number | null
+          cleared_at?: string | null
+          customer_count?: number | null
+          end_time?: string | null
+          equipment?: string | null
+          first_seen_at?: string
+          geometry?: Json | null
+          incident_id?: string
+          last_seen_at?: string
+          localities?: string[] | null
+          notes?: string | null
+          provider?: string
+          region?: string | null
+          restoration_hint?: string | null
+          service?: string
+          start_time?: string | null
+          status?: string
+          title?: string | null
+        }
+        Relationships: []
+      }
+      power_outages_summary: {
+        Row: {
+          by_provider: Json
+          by_region: Json
+          id: number
+          providers_failed: string[]
+          total_customers: number
+          total_incidents: number
+          updated_at: string
+        }
+        Insert: {
+          by_provider?: Json
+          by_region?: Json
+          id?: number
+          providers_failed?: string[]
+          total_customers?: number
+          total_incidents?: number
+          updated_at?: string
+        }
+        Update: {
+          by_provider?: Json
+          by_region?: Json
+          id?: number
+          providers_failed?: string[]
+          total_customers?: number
+          total_incidents?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stuff_liveblog_posts: {
         Row: {
           author: string | null
