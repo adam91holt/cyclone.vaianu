@@ -67,6 +67,10 @@ export type Database = {
       }
       cyclone_summaries: {
         Row: {
+          cyclone_lat: number | null
+          cyclone_lon: number | null
+          cyclone_position_confidence: string | null
+          cyclone_position_rationale: string | null
           generated_at: string
           headline: string
           id: string
@@ -83,6 +87,10 @@ export type Database = {
           summary: string
         }
         Insert: {
+          cyclone_lat?: number | null
+          cyclone_lon?: number | null
+          cyclone_position_confidence?: string | null
+          cyclone_position_rationale?: string | null
           generated_at?: string
           headline: string
           id?: string
@@ -99,6 +107,10 @@ export type Database = {
           summary: string
         }
         Update: {
+          cyclone_lat?: number | null
+          cyclone_lon?: number | null
+          cyclone_position_confidence?: string | null
+          cyclone_position_rationale?: string | null
           generated_at?: string
           headline?: string
           id?: string

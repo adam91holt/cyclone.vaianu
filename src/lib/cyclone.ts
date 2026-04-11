@@ -153,15 +153,19 @@ export function haversineKm(
   return 2 * R * Math.asin(Math.sqrt(h))
 }
 
-/** Straight-line distance from the current cyclone centre to the nearest
- *  canonical region's coastal town — a reasonable proxy for "distance to the
- *  NZ mainland". Returns `{ km, region }` with the closest canonical region. */
-export function cycloneDistanceToMainland(): {
+/** Straight-line distance from a cyclone centre to the nearest canonical
+ *  region's coastal town — a reasonable proxy for "distance to the NZ
+ *  mainland". Returns `{ km, region, bearing }` with the closest canonical
+ *  region. Pass a live `{lat, lon}` from `useCyclonePosition()` when
+ *  available; falls back to the static "NOW" point in CYCLONE_TRACK. */
+export function cycloneDistanceToMainland(
+  override?: { lat: number; lon: number } | null,
+): {
   km: number
   region: Region
   bearing: number
 } {
-  const pos = CYCLONE_TRACK[CURRENT_INDEX]
+  const pos = override ?? CYCLONE_TRACK[CURRENT_INDEX]
   let best: { km: number; region: Region } | null = null
   for (const r of REGIONS) {
     const km = haversineKm(pos.lat, pos.lon, r.lat, r.lon)

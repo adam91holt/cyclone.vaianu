@@ -202,6 +202,83 @@ interface SummaryShape {
   landfall: LandfallEstimate
 }
 
+/** Server-side deterministic cyclone-centre estimate based on an MSL
+ *  pressure minimum over a 6×6 grid covering the NZ tropical-cyclone
+ *  zone. Updates every 15 minutes as Open-Meteo refreshes. */
+interface CyclonePositionFix {
+  lat: number
+  lon: number
+  pressure_hpa: number
+  rationale: string
+}
+
+async function fetchCyclonePositionFromPressure(): Promise<CyclonePositionFix | null> {
+  // Cartesian grid across the zone where Vaianu could plausibly sit —
+  // north of NZ down through the North Island and just off the east
+  // coast. 6×6 = 36 points, ~300km spacing, well under Open-Meteo's
+  // per-request location limit.
+  const lats = [-25, -28, -31, -34, -37, -40]
+  const lons = [170, 172, 174, 176, 178, 180]
+  const pairs: Array<[number, number]> = []
+  for (const la of lats) for (const lo of lons) pairs.push([la, lo])
+  const latStr = pairs.map((p) => p[0]).join(',')
+  const lonStr = pairs.map((p) => p[1]).join(',')
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latStr}&longitude=${lonStr}&current=pressure_msl&timezone=UTC`
+
+  try {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`open-meteo pressure grid: http ${res.status}`)
+    const payload = await res.json()
+    const rows = Array.isArray(payload) ? payload : [payload]
+    type Row = {
+      latitude: number
+      longitude: number
+      current?: { pressure_msl?: number }
+    }
+    const typed = rows as Row[]
+    let best: { lat: number; lon: number; p: number } | null = null
+    for (const r of typed) {
+      const p = r.current?.pressure_msl
+      if (typeof p !== 'number' || !Number.isFinite(p)) continue
+      if (!best || p < best.p) best = { lat: r.latitude, lon: r.longitude, p }
+    }
+    if (!best) return null
+
+    // Centroid refinement: weighted average of the 4 lowest-pressure grid
+    // points, using (1015 - pressure) as the weight. Pulls the fix toward
+    // the true centre between grid nodes without overselling the precision.
+    const sorted = typed
+      .filter((r) => typeof r.current?.pressure_msl === 'number')
+      .sort(
+        (a, b) =>
+          (a.current!.pressure_msl as number) - (b.current!.pressure_msl as number),
+      )
+      .slice(0, 4)
+    let wLat = 0
+    let wLon = 0
+    let wSum = 0
+    for (const r of sorted) {
+      const p = r.current!.pressure_msl as number
+      const w = Math.max(0, 1015 - p)
+      wLat += r.latitude * w
+      wLon += r.longitude * w
+      wSum += w
+    }
+    const refinedLat = wSum > 0 ? wLat / wSum : best.lat
+    const refinedLon = wSum > 0 ? wLon / wSum : best.lon
+
+    return {
+      lat: Number(refinedLat.toFixed(3)),
+      lon: Number(refinedLon.toFixed(3)),
+      pressure_hpa: Number(best.p.toFixed(1)),
+      rationale: `Pressure minimum ${best.p.toFixed(1)} hPa at (${best.lat.toFixed(1)}, ${best.lon.toFixed(1)}) — Open-Meteo GFS grid, refined from 4 nearest nodes.`,
+    }
+  } catch (err) {
+    console.warn('cyclone position fix failed', err)
+    return null
+  }
+}
+
 const MODEL = 'claude-sonnet-4-6'
 
 function clamp(n: unknown): number {
@@ -216,14 +293,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const [regional, recentNews, warnings, liveblog, niwa, tweets] = await Promise.all([
-      fetchRegionalWeather(),
-      fetchRecentNews(),
-      fetchMetServiceWarnings(),
-      fetchLiveblog(),
-      fetchNiwaForecast(),
-      fetchRecentTweets(),
-    ])
+    const [regional, recentNews, warnings, liveblog, niwa, tweets, positionFix] =
+      await Promise.all([
+        fetchRegionalWeather(),
+        fetchRecentNews(),
+        fetchMetServiceWarnings(),
+        fetchLiveblog(),
+        fetchNiwaForecast(),
+        fetchRecentTweets(),
+        fetchCyclonePositionFromPressure(),
+      ])
 
     const nowNzt = new Date().toLocaleString('en-NZ', {
       timeZone: 'Pacific/Auckland',
@@ -464,6 +543,10 @@ Return ONLY valid JSON, no markdown fences, no preamble.`
         landfall_confidence: landfallEstimateIso ? landfallConfidence : null,
         landfall_region: landfallRegion,
         landfall_rationale: landfallRationale,
+        cyclone_lat: positionFix?.lat ?? null,
+        cyclone_lon: positionFix?.lon ?? null,
+        cyclone_position_confidence: positionFix ? 'high' : null,
+        cyclone_position_rationale: positionFix?.rationale ?? null,
       })
       .select()
       .single()
