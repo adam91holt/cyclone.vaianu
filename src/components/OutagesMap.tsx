@@ -26,6 +26,7 @@ const PROVIDER_COLOURS: Record<OutageProvider, string> = {
   topenergy: '#f59e0b', // amber-500
   counties: '#a855f7', // purple-500
   vector: '#14b8a6', // teal-500
+  powerco: '#ec4899', // pink-500
 }
 
 const PROVIDER_LABELS: Record<OutageProvider, string> = {
@@ -34,9 +35,10 @@ const PROVIDER_LABELS: Record<OutageProvider, string> = {
   topenergy: 'Top Energy',
   counties: 'Counties Energy',
   vector: 'Vector',
+  powerco: 'Powerco',
 }
 
-const PROVIDER_COUNT = 5
+const PROVIDER_COUNT = 6
 
 function formatTime(iso: string | null): string | null {
   if (!iso) return null
@@ -187,7 +189,7 @@ export function OutagesMap() {
               </div>
             )}
           </div>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex gap-1 flex-wrap">
             {(
               [
                 'all',
@@ -196,6 +198,7 @@ export function OutagesMap() {
                 'topenergy',
                 'counties',
                 'vector',
+                'powerco',
               ] as ProviderFilter[]
             ).map(
               (key) => {
@@ -272,7 +275,7 @@ export function OutagesMap() {
         )}
 
         <div className="mt-3 text-[10px] text-white/40 font-mono uppercase tracking-wider border-t border-white/5 pt-2">
-          Upper North Island coverage: Northland · Auckland · Waikato · Far North
+          North Island coverage: Northland · Auckland · Waikato · Coromandel · Bay of Plenty · Taranaki · Wairarapa
         </div>
       </div>
 
@@ -335,6 +338,7 @@ export function OutagesMap() {
               <LegendRow colour={PROVIDER_COLOURS.topenergy} label="Top Energy" />
               <LegendRow colour={PROVIDER_COLOURS.counties} label="Counties Energy" />
               <LegendRow colour={PROVIDER_COLOURS.vector} label="Vector" />
+              <LegendRow colour={PROVIDER_COLOURS.powerco} label="Powerco" />
               <div className="text-white/40 pt-1 border-t border-white/10 mt-1">
                 Unplanned faults only
               </div>

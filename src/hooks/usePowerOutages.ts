@@ -7,6 +7,7 @@ export type OutageProvider =
   | 'topenergy'
   | 'counties'
   | 'vector'
+  | 'powerco'
 export type OutageService = 'electricity' | 'fibre'
 export type OutageStatus = 'unplanned' | 'planned'
 

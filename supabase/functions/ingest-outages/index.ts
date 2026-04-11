@@ -63,6 +63,7 @@ const ADAPTERS = [
   'ingest-outages-topenergy',
   'ingest-outages-counties',
   'ingest-outages-vector',
+  'ingest-outages-powerco',
 ] as const
 
 async function callAdapter(slug: string): Promise<AdapterResponse> {
