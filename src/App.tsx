@@ -35,6 +35,7 @@ import { NiwaVideoCard } from '@/components/NiwaVideoCard'
 import { NiwaForecast } from '@/components/NiwaForecast'
 import { NiwaTweets } from '@/components/NiwaTweets'
 import { StuffLiveblog } from '@/components/StuffLiveblog'
+import { NzhLiveblog } from '@/components/NzhLiveblog'
 import { FeedHealth } from '@/components/FeedHealth'
 import { CivilDefenceAlerts } from '@/components/CivilDefenceAlerts'
 import { Timeline } from '@/components/Timeline'
@@ -272,7 +273,10 @@ function App() {
 
             {tab === 'news' && (
               <>
-                <StuffLiveblog />
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <StuffLiveblog />
+                  <NzhLiveblog />
+                </div>
                 <NewsFeed />
               </>
             )}

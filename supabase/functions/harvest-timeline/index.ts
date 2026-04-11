@@ -360,6 +360,39 @@ async function harvestLiveblog(now: string): Promise<TimelineRow[]> {
     })
 }
 
+// --- NZ Herald liveblog posts (LiveCenter feed) ------------------------
+// Mirrors harvestLiveblog but reads from nzh_liveblog_posts. Uses a
+// distinct event_key prefix so NZH and Stuff posts don't collide.
+async function harvestNzhLiveblog(now: string): Promise<TimelineRow[]> {
+  const cutoff = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
+  const { data, error } = await supabase
+    .from('nzh_liveblog_posts')
+    .select('post_id, headline, body, published_at, shared_links')
+    .gte('published_at', cutoff)
+    .order('published_at', { ascending: false })
+    .limit(25)
+  if (error) throw new Error(`nzh_liveblog: ${error.message}`)
+  return (data ?? [])
+    .filter((r) => r.headline && r.published_at)
+    .map((r) => {
+      const links = Array.isArray(r.shared_links) ? (r.shared_links as Array<{ url?: string }>) : []
+      const firstLink = links.find((l) => l?.url)?.url ?? null
+      return {
+        event_key: `nzh_liveblog:${r.post_id}`,
+        kind: 'liveblog',
+        severity: 'info',
+        title: decodeEntities(r.headline)!,
+        body: truncate(decodeEntities(r.body), 500),
+        link: firstLink,
+        source: 'NZH liveblog',
+        region: null,
+        occurred_at: r.published_at!,
+        metadata: null,
+        last_seen_at: now,
+      }
+    })
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -376,13 +409,14 @@ Deno.serve(async (req) => {
       harvestOutages(now),
       harvestNews(now),
       harvestLiveblog(now),
+      harvestNzhLiveblog(now),
       harvestTweets(now),
     ])
 
     const rows: TimelineRow[] = []
     const errors: string[] = []
     const counts: Record<string, number> = {}
-    const kinds = ['nema', 'warnings', 'roads', 'outages', 'news', 'liveblog', 'tweets']
+    const kinds = ['nema', 'warnings', 'roads', 'outages', 'news', 'liveblog', 'nzh_liveblog', 'tweets']
     results.forEach((r, i) => {
       if (r.status === 'fulfilled') {
         rows.push(...r.value)

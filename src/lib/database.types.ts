@@ -503,6 +503,39 @@ export type Database = {
         }
         Relationships: []
       }
+      nzh_liveblog_posts: {
+        Row: {
+          author: string | null
+          body: string | null
+          fetched_at: string
+          headline: string
+          post_id: string
+          published_at: string
+          shared_links: Json
+          source_updated_at: string | null
+        }
+        Insert: {
+          author?: string | null
+          body?: string | null
+          fetched_at?: string
+          headline: string
+          post_id: string
+          published_at: string
+          shared_links?: Json
+          source_updated_at?: string | null
+        }
+        Update: {
+          author?: string | null
+          body?: string | null
+          fetched_at?: string
+          headline?: string
+          post_id?: string
+          published_at?: string
+          shared_links?: Json
+          source_updated_at?: string | null
+        }
+        Relationships: []
+      }
       nzta_road_events: {
         Row: {
           alternative_route: string | null
