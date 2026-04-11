@@ -22,8 +22,7 @@ import {
 } from 'lucide-react'
 import { AlertBar } from '@/components/AlertBar'
 import { Header } from '@/components/Header'
-import { HeroWind } from '@/components/HeroWind'
-import { StatCards } from '@/components/StatCards'
+import { RegionalImpactBoard } from '@/components/RegionalImpactBoard'
 import { RegionsPanel } from '@/components/RegionsPanel'
 import { NewsTicker } from '@/components/NewsTicker'
 import { CycloneMap } from '@/components/CycloneMap'
@@ -196,14 +195,7 @@ function App() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch">
-          <div className="lg:col-span-5 flex">
-            <HeroWind />
-          </div>
-          <div className="lg:col-span-7 flex flex-col gap-3">
-            <StatCards />
-          </div>
-        </div>
+        <RegionalImpactBoard />
 
         {/* Tabs row — sidebar on desktop, content area */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
