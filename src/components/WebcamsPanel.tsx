@@ -2,8 +2,9 @@ import { Video, ExternalLink } from 'lucide-react'
 import { LiveWebcam } from '@/components/LiveWebcam'
 import { StillWebcam } from '@/components/StillWebcam'
 import { YouTubeWebcam } from '@/components/YouTubeWebcam'
+import { IframeWebcam } from '@/components/IframeWebcam'
 
-type CamType = 'hls' | 'youtube' | 'still'
+type CamType = 'hls' | 'youtube' | 'still' | 'iframe'
 
 interface Cam {
   key: string
@@ -25,6 +26,24 @@ interface Group {
 }
 
 const GROUPS: Group[] = [
+  {
+    title: 'Auckland',
+    sub: 'Hauraki Gulf · RED warning',
+    credit: {
+      label: 'Hauraki Gulf Weather',
+      href: 'https://www.youtube.com/@HaurakiGulfWeatherLiveWebcam',
+    },
+    cams: [
+      {
+        key: 'hauraki_gulf',
+        name: 'Hauraki Gulf',
+        sub: 'Auckland · 24/7 live stream',
+        type: 'youtube',
+        src: 'UC18wIshJBimh3cAVbsxnkqg',
+        href: 'https://www.youtube.com/watch?v=CGIFDalU84U',
+      },
+    ],
+  },
   {
     title: 'Coromandel',
     sub: 'Direct landfall zone · RED warning',
@@ -53,6 +72,37 @@ const GROUPS: Group[] = [
         type: 'hls',
         src: 'https://api.corolive.nz/hls/thames_high.m3u8',
         href: 'https://corolive.nz/thames',
+      },
+    ],
+  },
+  {
+    title: 'Bay of Plenty',
+    sub: 'Tauranga · Mount Maunganui',
+    credit: { label: 'Mixed sources', href: 'https://surf.co.nz/webcams/bay-of-plenty/' },
+    cams: [
+      {
+        key: 'tauranga_harbour',
+        name: 'Tauranga Harbourmaster',
+        sub: 'Harbour mouth · 24/7 YouTube',
+        type: 'youtube',
+        src: 'UCOaSNQKVS1jnxszfz29jdoA',
+        href: 'https://www.youtube.com/watch?v=oKOh7lIbvMw',
+      },
+      {
+        key: 'mt_maunganui_beach',
+        name: 'Mt Maunganui Main Beach',
+        sub: 'Surf cam · rtsp.me',
+        type: 'iframe',
+        src: 'https://rtsp.me/embed/yZRt3QZn/',
+        href: 'https://www.camjam.co.nz/bay-of-plenty/mt-maunganui-surf-cam',
+      },
+      {
+        key: 'mt_maunganui_wharf',
+        name: 'Mt Maunganui Wharf',
+        sub: 'Second angle · rtsp.me',
+        type: 'iframe',
+        src: 'https://rtsp.me/embed/KyNbnYa5/',
+        href: 'https://www.camjam.co.nz/bay-of-plenty/mt-maunganui-surf-cam',
       },
     ],
   },
@@ -132,6 +182,9 @@ function CamCard({ cam }: { cam: Cam }) {
       {cam.type === 'youtube' && (
         <YouTubeWebcam channelId={cam.src} name={cam.name} sub={cam.sub} />
       )}
+      {cam.type === 'iframe' && (
+        <IframeWebcam src={cam.src} name={cam.name} sub={cam.sub} />
+      )}
       {cam.type === 'still' && (
         <StillWebcam
           src={cam.src}
@@ -166,7 +219,7 @@ export function WebcamsPanel() {
               Live Webcams · Cyclone Track
             </div>
             <div className="text-[9px] text-white/40 font-mono uppercase tracking-wider">
-              8 cameras · Coromandel → East Coast → Central Plateau → Wellington
+              12 cameras · Auckland → Coromandel → BOP → East Coast → Wellington
             </div>
           </div>
         </div>
