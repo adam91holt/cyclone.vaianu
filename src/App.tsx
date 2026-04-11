@@ -11,6 +11,8 @@ import {
   Zap,
   Construction,
   Waves,
+  Clock,
+  Sparkles,
 } from 'lucide-react'
 import { AlertBar } from '@/components/AlertBar'
 import { Header } from '@/components/Header'
@@ -33,8 +35,9 @@ import { NiwaTweets } from '@/components/NiwaTweets'
 import { StuffLiveblog } from '@/components/StuffLiveblog'
 import { FeedHealth } from '@/components/FeedHealth'
 import { CivilDefenceAlerts } from '@/components/CivilDefenceAlerts'
-// Lazy-loaded — each carries a heavy dependency (hls.js, leaflet) we don't
-// want on the critical path.
+import { Timeline } from '@/components/Timeline'
+// Lazy-loaded — each carries a heavy dependency (hls.js, leaflet,
+// react-markdown) we don't want on the critical path.
 const WebcamsPanel = lazy(() =>
   import('@/components/WebcamsPanel').then((m) => ({ default: m.WebcamsPanel })),
 )
@@ -47,9 +50,16 @@ const RoadEventsMap = lazy(() =>
 const RiversMap = lazy(() =>
   import('@/components/RiversMap').then((m) => ({ default: m.RiversMap })),
 )
+const ComprehensiveReport = lazy(() =>
+  import('@/components/ComprehensiveReport').then((m) => ({
+    default: m.ComprehensiveReport,
+  })),
+)
 
 type TabKey =
   | 'dashboard'
+  | 'timeline'
+  | 'report'
   | 'weather'
   | 'webcams'
   | 'outages'
@@ -72,6 +82,8 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { key: 'dashboard', label: 'Live Map', icon: LayoutDashboard, sub: 'Windy + regions' },
+  { key: 'timeline', label: 'Timeline', icon: Clock, sub: 'Notable events · live' },
+  { key: 'report', label: 'Opus Report', icon: Sparkles, sub: 'Hourly · Claude Opus 4.6' },
   { key: 'weather', label: 'Warnings', icon: CloudRain, sub: 'MetService + Open-Meteo' },
   { key: 'webcams', label: 'Webcams', icon: Video, sub: 'Live landfall zone' },
   { key: 'outages', label: 'Outages', icon: Zap, sub: 'Power · live' },
@@ -182,6 +194,14 @@ function App() {
                   <RegionsPanel />
                 </div>
               </div>
+            )}
+
+            {tab === 'timeline' && <Timeline />}
+
+            {tab === 'report' && (
+              <Suspense fallback={<TabLoading label="Loading Opus report…" />}>
+                <ComprehensiveReport />
+              </Suspense>
             )}
 
             {tab === 'weather' && (

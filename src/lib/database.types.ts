@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      comprehensive_reports: {
+        Row: {
+          cache_creation_tokens: number | null
+          cache_read_tokens: number | null
+          duration_ms: number | null
+          generated_at: string
+          headline: string
+          id: string
+          input_tokens: number | null
+          key_findings: Json | null
+          markdown: string
+          model: string
+          output_tokens: number | null
+          severity: string | null
+          summary: string | null
+          tool_calls: Json | null
+        }
+        Insert: {
+          cache_creation_tokens?: number | null
+          cache_read_tokens?: number | null
+          duration_ms?: number | null
+          generated_at?: string
+          headline: string
+          id?: string
+          input_tokens?: number | null
+          key_findings?: Json | null
+          markdown: string
+          model: string
+          output_tokens?: number | null
+          severity?: string | null
+          summary?: string | null
+          tool_calls?: Json | null
+        }
+        Update: {
+          cache_creation_tokens?: number | null
+          cache_read_tokens?: number | null
+          duration_ms?: number | null
+          generated_at?: string
+          headline?: string
+          id?: string
+          input_tokens?: number | null
+          key_findings?: Json | null
+          markdown?: string
+          model?: string
+          output_tokens?: number | null
+          severity?: string | null
+          summary?: string | null
+          tool_calls?: Json | null
+        }
+        Relationships: []
+      }
       cyclone_summaries: {
         Row: {
           generated_at: string
@@ -695,6 +746,54 @@ export type Database = {
           published_at?: string
           shared_links?: Json | null
           source_updated_at?: string | null
+        }
+        Relationships: []
+      }
+      timeline_events: {
+        Row: {
+          body: string | null
+          event_key: string
+          first_seen_at: string
+          id: string
+          kind: string
+          last_seen_at: string
+          link: string | null
+          metadata: Json | null
+          occurred_at: string
+          region: string | null
+          severity: string
+          source: string | null
+          title: string
+        }
+        Insert: {
+          body?: string | null
+          event_key: string
+          first_seen_at?: string
+          id?: string
+          kind: string
+          last_seen_at?: string
+          link?: string | null
+          metadata?: Json | null
+          occurred_at: string
+          region?: string | null
+          severity: string
+          source?: string | null
+          title: string
+        }
+        Update: {
+          body?: string | null
+          event_key?: string
+          first_seen_at?: string
+          id?: string
+          kind?: string
+          last_seen_at?: string
+          link?: string | null
+          metadata?: Json | null
+          occurred_at?: string
+          region?: string | null
+          severity?: string
+          source?: string | null
+          title?: string
         }
         Relationships: []
       }
