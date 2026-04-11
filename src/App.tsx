@@ -97,6 +97,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { key: 'dashboard', label: 'Live Map', icon: LayoutDashboard, sub: 'Windy + regions', mobilePrimary: true },
+  { key: 'reports', label: 'Ground Reports', icon: Camera, sub: 'Submit + photos' },
   { key: 'timeline', label: 'Timeline', icon: Clock, sub: 'Notable events · live' },
   { key: 'report', label: 'Opus Report', icon: Sparkles, sub: 'Hourly · Claude Opus 4.6', mobilePrimary: true },
   { key: 'weather', label: 'Warnings', icon: CloudRain, sub: 'MetService + Open-Meteo', mobilePrimary: true },
@@ -104,7 +105,6 @@ const TABS: TabDef[] = [
   { key: 'outages', label: 'Outages', icon: Zap, sub: 'Power · live', mobilePrimary: true },
   { key: 'roads', label: 'Roads', icon: Construction, sub: 'NZTA · live' },
   { key: 'rivers', label: 'Rivers', icon: Waves, sub: '1,700+ gauges · 10m' },
-  { key: 'reports', label: 'Ground Reports', icon: Camera, sub: 'Submit + photos' },
   { key: 'niwa', label: 'NIWA', icon: CloudSun, sub: '8-day + @NiwaWeather' },
   { key: 'flights', label: 'Flights', icon: Plane, sub: 'Live ADS-B', desktopOnly: true },
   { key: 'news', label: 'News', icon: Newspaper, sub: 'RNZ · Stuff · NZH' },
