@@ -494,6 +494,69 @@ export type Database = {
         }
         Relationships: []
       }
+      river_readings: {
+        Row: {
+          council: string
+          measurement: string
+          site: string
+          ts: string
+          value: number | null
+        }
+        Insert: {
+          council: string
+          measurement?: string
+          site: string
+          ts: string
+          value?: number | null
+        }
+        Update: {
+          council?: string
+          measurement?: string
+          site?: string
+          ts?: string
+          value?: number | null
+        }
+        Relationships: []
+      }
+      river_sites: {
+        Row: {
+          council: string
+          council_name: string | null
+          last_fetched_at: string
+          latest_ts: string | null
+          latest_value: number | null
+          latitude: number | null
+          longitude: number | null
+          measurement: string
+          name: string
+          unit: string | null
+        }
+        Insert: {
+          council: string
+          council_name?: string | null
+          last_fetched_at?: string
+          latest_ts?: string | null
+          latest_value?: number | null
+          latitude?: number | null
+          longitude?: number | null
+          measurement?: string
+          name: string
+          unit?: string | null
+        }
+        Update: {
+          council?: string
+          council_name?: string | null
+          last_fetched_at?: string
+          latest_ts?: string | null
+          latest_value?: number | null
+          latitude?: number | null
+          longitude?: number | null
+          measurement?: string
+          name?: string
+          unit?: string | null
+        }
+        Relationships: []
+      }
       stuff_liveblog_posts: {
         Row: {
           author: string | null
@@ -578,6 +641,24 @@ export type Database = {
           last_status: string
           last_success_at: string
           schedule: string
+        }[]
+      }
+      get_river_summary: {
+        Args: never
+        Returns: {
+          baseline_ts: string
+          baseline_value: number
+          change: number
+          change_pct: number
+          council: string
+          council_name: string
+          latest_ts: string
+          latest_value: number
+          latitude: number
+          longitude: number
+          name: string
+          reading_count: number
+          unit: string
         }[]
       }
       prune_weather_history: { Args: never; Returns: undefined }

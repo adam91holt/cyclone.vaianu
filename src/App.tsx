@@ -10,6 +10,7 @@ import {
   Video,
   Zap,
   Construction,
+  Waves,
 } from 'lucide-react'
 import { AlertBar } from '@/components/AlertBar'
 import { Header } from '@/components/Header'
@@ -43,6 +44,9 @@ const OutagesMap = lazy(() =>
 const RoadEventsMap = lazy(() =>
   import('@/components/RoadEventsMap').then((m) => ({ default: m.RoadEventsMap })),
 )
+const RiversMap = lazy(() =>
+  import('@/components/RiversMap').then((m) => ({ default: m.RiversMap })),
+)
 
 type TabKey =
   | 'dashboard'
@@ -50,6 +54,7 @@ type TabKey =
   | 'webcams'
   | 'outages'
   | 'roads'
+  | 'rivers'
   | 'niwa'
   | 'flights'
   | 'news'
@@ -71,6 +76,7 @@ const TABS: TabDef[] = [
   { key: 'webcams', label: 'Webcams', icon: Video, sub: 'Live landfall zone' },
   { key: 'outages', label: 'Outages', icon: Zap, sub: 'Power · live' },
   { key: 'roads', label: 'Roads', icon: Construction, sub: 'NZTA · live' },
+  { key: 'rivers', label: 'Rivers', icon: Waves, sub: '1,700+ gauges · 10m' },
   { key: 'niwa', label: 'NIWA', icon: CloudSun, sub: '8-day + @NiwaWeather' },
   { key: 'flights', label: 'Flights', icon: Plane, sub: 'Live ADS-B', desktopOnly: true },
   { key: 'news', label: 'News', icon: Newspaper, sub: 'RNZ · Stuff · NZH' },
@@ -202,6 +208,12 @@ function App() {
             {tab === 'roads' && (
               <Suspense fallback={<TabLoading label="Loading road events…" />}>
                 <RoadEventsMap />
+              </Suspense>
+            )}
+
+            {tab === 'rivers' && (
+              <Suspense fallback={<TabLoading label="Loading river gauges…" />}>
+                <RiversMap />
               </Suspense>
             )}
 

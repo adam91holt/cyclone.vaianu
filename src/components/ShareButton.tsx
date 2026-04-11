@@ -108,13 +108,29 @@ export function ShareButton() {
 
   return (
     <>
+      {/* Desktop / tablet: inline chip in the header badge row */}
       <button
         type="button"
         onClick={handleOpen}
-        className="group flex items-center gap-1.5 rounded-md border border-white/15 bg-white/[0.04] hover:bg-white/[0.10] hover:border-white/30 transition-colors px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-[0.15em] text-white/60 hover:text-white"
+        className="hidden sm:flex group items-center gap-1.5 rounded-md border border-white/15 bg-white/[0.04] hover:bg-white/[0.10] hover:border-white/30 transition-colors px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-[0.15em] text-white/60 hover:text-white"
       >
         <Share2 className="h-3 w-3" />
         Share
+      </button>
+
+      {/* Mobile: floating action button anchored bottom-right, safe-area
+          aware. Offset upwards so it sits above the fixed bottom tab bar. */}
+      <button
+        type="button"
+        onClick={handleOpen}
+        aria-label="Share"
+        className="sm:hidden fixed z-[90] h-14 w-14 rounded-full border border-red-400/50 bg-red-600 text-white shadow-[0_8px_24px_rgba(239,68,68,0.45),0_2px_8px_rgba(0,0,0,0.6)] active:scale-95 active:bg-red-500 hover:bg-red-500 transition-all flex items-center justify-center ring-4 ring-red-500/15 hover:ring-red-500/30"
+        style={{
+          right: 'max(1rem, env(safe-area-inset-right))',
+          bottom: 'calc(4.5rem + env(safe-area-inset-bottom))',
+        }}
+      >
+        <Share2 className="h-5 w-5" strokeWidth={2.4} />
       </button>
 
       {/* Offscreen render target — always mounted so ref is available */}
