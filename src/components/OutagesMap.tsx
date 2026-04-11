@@ -25,6 +25,7 @@ const PROVIDER_COLOURS: Record<OutageProvider, string> = {
   wel: '#3b82f6', // blue-500
   topenergy: '#f59e0b', // amber-500
   counties: '#a855f7', // purple-500
+  vector: '#14b8a6', // teal-500
 }
 
 const PROVIDER_LABELS: Record<OutageProvider, string> = {
@@ -32,9 +33,10 @@ const PROVIDER_LABELS: Record<OutageProvider, string> = {
   wel: 'WEL Networks',
   topenergy: 'Top Energy',
   counties: 'Counties Energy',
+  vector: 'Vector',
 }
 
-const PROVIDER_COUNT = 4
+const PROVIDER_COUNT = 5
 
 function formatTime(iso: string | null): string | null {
   if (!iso) return null
@@ -137,13 +139,17 @@ export function OutagesMap() {
   }, [outages, filter])
 
   const polygonOutages = filtered.filter(
-    (o) => o.geometry && o.geometry.type === 'Polygon',
+    (o) =>
+      o.geometry &&
+      (o.geometry.type === 'Polygon' || o.geometry.type === 'MultiPolygon'),
   )
   const pointOutages = filtered.filter(
     (o) =>
       o.centroid_lat != null &&
       o.centroid_lon != null &&
-      (!o.geometry || o.geometry.type !== 'Polygon'),
+      (!o.geometry ||
+        (o.geometry.type !== 'Polygon' &&
+          o.geometry.type !== 'MultiPolygon')),
   )
 
   // Counts are computed from the live (unplanned-only) list so the header
@@ -182,7 +188,16 @@ export function OutagesMap() {
             )}
           </div>
           <div className="flex gap-1">
-            {(['all', 'northpower', 'wel', 'topenergy', 'counties'] as ProviderFilter[]).map(
+            {(
+              [
+                'all',
+                'northpower',
+                'wel',
+                'topenergy',
+                'counties',
+                'vector',
+              ] as ProviderFilter[]
+            ).map(
               (key) => {
                 const active = filter === key
                 const label =
@@ -257,7 +272,7 @@ export function OutagesMap() {
         )}
 
         <div className="mt-3 text-[10px] text-white/40 font-mono uppercase tracking-wider border-t border-white/5 pt-2">
-          Not yet covered: Vector (Auckland) — upstream API key rejected
+          Upper North Island coverage: Northland · Auckland · Waikato · Far North
         </div>
       </div>
 
@@ -319,6 +334,7 @@ export function OutagesMap() {
               <LegendRow colour={PROVIDER_COLOURS.wel} label="WEL Networks" />
               <LegendRow colour={PROVIDER_COLOURS.topenergy} label="Top Energy" />
               <LegendRow colour={PROVIDER_COLOURS.counties} label="Counties Energy" />
+              <LegendRow colour={PROVIDER_COLOURS.vector} label="Vector" />
               <div className="text-white/40 pt-1 border-t border-white/10 mt-1">
                 Unplanned faults only
               </div>

@@ -8,9 +8,9 @@
 // live state on a transient upstream blip. We only clear when the adapter
 // reports ok:true AND an existing incident is missing from the new set.
 //
-// TODO(vector): Vector's API key in their public config.js is rejected.
-// Add it once a workable data source is found. Counties Energy is routed
-// through a thecolab.ai proxy that handles their AWS WAF bypass.
+// Counties Energy and Vector are routed through a thecolab.ai proxy —
+// their direct endpoints block Deno edge runtime (AWS WAF TLS fingerprint
+// and rejected public API key respectively).
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
@@ -62,6 +62,7 @@ const ADAPTERS = [
   'ingest-outages-wel',
   'ingest-outages-topenergy',
   'ingest-outages-counties',
+  'ingest-outages-vector',
 ] as const
 
 async function callAdapter(slug: string): Promise<AdapterResponse> {

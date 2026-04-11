@@ -1,7 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
-export type OutageProvider = 'northpower' | 'wel' | 'topenergy' | 'counties'
+export type OutageProvider =
+  | 'northpower'
+  | 'wel'
+  | 'topenergy'
+  | 'counties'
+  | 'vector'
 export type OutageService = 'electricity' | 'fibre'
 export type OutageStatus = 'unplanned' | 'planned'
 
