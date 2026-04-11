@@ -76,6 +76,10 @@ export default {
   				'0%': { transform: 'translateX(0)' },
   				'100%': { transform: 'translateX(-50%)' }
   			},
+  			'feedback-pulse': {
+  				'0%, 100%': { opacity: '0.4', transform: 'scale(1)' },
+  				'50%': { opacity: '0.9', transform: 'scale(1.04)' }
+  			},
   			'accordion-down': {
   				from: {
   					height: '0'
@@ -96,6 +100,7 @@ export default {
   		animation: {
   			breathe: 'breathe 4s ease-in-out infinite',
   			marquee: 'marquee 60s linear infinite',
+  			'feedback-pulse': 'feedback-pulse 2.4s ease-in-out infinite',
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out'
   		}

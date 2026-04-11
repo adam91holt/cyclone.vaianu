@@ -3,6 +3,7 @@ import { useCountdown } from '@/hooks/useCountdown'
 import { useLandfall, formatLandfallLabel } from '@/hooks/useLandfall'
 import { LiveViewers } from '@/components/LiveViewers'
 import { ShareButton } from '@/components/ShareButton'
+import { FeedbackButton } from '@/components/FeedbackButton'
 
 const CONFIDENCE_STYLES = {
   high: 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10',
@@ -30,6 +31,7 @@ export function Header() {
             </span>
             <LiveViewers />
             <ShareButton />
+            <FeedbackButton />
           </div>
           <h1 className="font-display text-5xl sm:text-6xl font-bold tracking-tighter leading-[0.85]">
             VAIANU<span className="text-red-500">.</span>
