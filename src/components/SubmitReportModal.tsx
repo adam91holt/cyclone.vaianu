@@ -164,7 +164,7 @@ export function SubmitReportModal({ open, onClose }: SubmitReportModalProps) {
       onClick={handleClose}
     >
       <div
-        className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-2xl border border-white/15 bg-gradient-to-br from-[#0f1729] via-[#0a1020] to-[#070b16] shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300"
+        className="relative w-full max-w-lg min-w-0 max-h-[92vh] overflow-x-hidden overflow-y-auto rounded-2xl border border-white/15 bg-gradient-to-br from-[#0f1729] via-[#0a1020] to-[#070b16] shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(239,68,68,0.16),transparent_60%)]" />

@@ -7,18 +7,30 @@ const DELAY_MS = 30_000
 
 type Status = 'idle' | 'submitting' | 'success' | 'error'
 
-export function SignupPopup() {
+interface SignupPopupProps {
+  /** Suppress the popup entirely (e.g. on the Ground Reports tab where we
+   *  don't want to interrupt photo submission). */
+  disabled?: boolean
+}
+
+export function SignupPopup({ disabled }: SignupPopupProps = {}) {
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<Status>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   useEffect(() => {
+    if (disabled) {
+      setOpen(false)
+      return
+    }
     if (typeof window === 'undefined') return
     if (window.localStorage.getItem(STORAGE_KEY)) return
     const t = window.setTimeout(() => setOpen(true), DELAY_MS)
     return () => window.clearTimeout(t)
-  }, [])
+  }, [disabled])
+
+  if (disabled) return null
 
   function dismiss() {
     setOpen(false)
@@ -73,11 +85,11 @@ export function SignupPopup() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-sm animate-in fade-in duration-300"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-6 bg-black/70 backdrop-blur-sm animate-in fade-in duration-300"
       onClick={dismiss}
     >
       <div
-        className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br from-[#0f1729] via-[#0a1020] to-[#070b16] shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300"
+        className="relative w-full max-w-md min-w-0 overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br from-[#0f1729] via-[#0a1020] to-[#070b16] shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Glow accents */}
@@ -93,7 +105,7 @@ export function SignupPopup() {
           <X className="h-4 w-4" />
         </button>
 
-        <div className="relative px-6 pt-7 pb-6 sm:px-8 sm:pt-8 sm:pb-7">
+        <div className="relative px-5 pt-6 pb-5 sm:px-8 sm:pt-8 sm:pb-7">
           <div className="flex items-center gap-1.5 mb-3">
             <div className="flex items-center gap-1.5 rounded-sm bg-red-600/15 border border-red-600/30 px-2 py-0.5">
               <Sparkles className="h-3 w-3 text-red-400" />

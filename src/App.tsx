@@ -441,7 +441,7 @@ function App() {
         </a>
       </footer>
       <SubmitReportFab hidden={tab === 'reports'} />
-      <SignupPopup />
+      <SignupPopup disabled={tab === 'reports'} />
     </div>
     </RegionProvider>
   )
