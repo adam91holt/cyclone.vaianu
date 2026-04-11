@@ -120,6 +120,42 @@ async function fetchLiveblog(): Promise<
   return data ?? []
 }
 
+// Reads tweets that harvest-timeline has already pulled into timeline_events.
+// These come from NZ official accounts — civil defence, police, transport,
+// MetService — via cyclone-api.thecolab.ai. Ground-truth, high-signal, and
+// time-sensitive.
+async function fetchRecentTweets(): Promise<
+  Array<{
+    handle: string | null
+    author: string | null
+    category: string | null
+    text: string | null
+    published_at: string
+  }>
+> {
+  const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+  const { data } = await supabase
+    .from('timeline_events')
+    .select('title, source, occurred_at, metadata')
+    .eq('kind', 'tweet')
+    .gte('occurred_at', cutoff)
+    .order('occurred_at', { ascending: false })
+    .limit(20)
+  return (data ?? []).map((r) => {
+    const meta = (r.metadata ?? {}) as {
+      author_name?: string
+      author_category?: string
+    }
+    return {
+      handle: r.source,
+      author: meta.author_name ?? null,
+      category: meta.author_category ?? null,
+      text: r.title,
+      published_at: r.occurred_at,
+    }
+  })
+}
+
 async function fetchNiwaForecast(): Promise<
   Array<{ date: string; forecast: string; wind: string | null; issued: string | null }>
 > {
@@ -180,12 +216,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const [regional, recentNews, warnings, liveblog, niwa] = await Promise.all([
+    const [regional, recentNews, warnings, liveblog, niwa, tweets] = await Promise.all([
       fetchRegionalWeather(),
       fetchRecentNews(),
       fetchMetServiceWarnings(),
       fetchLiveblog(),
       fetchNiwaForecast(),
+      fetchRecentTweets(),
     ])
 
     const nowNzt = new Date().toLocaleString('en-NZ', {
@@ -250,6 +287,23 @@ Deno.serve(async (req) => {
         .map((d) => `- ${d.date}: ${d.forecast}${d.wind ? ` · wind ${d.wind}` : ''}`)
         .join('\n') || '(no NIWA forecast)'
 
+    const tweetsBlock =
+      tweets
+        .map((t) => {
+          const when = t.published_at
+            ? new Date(t.published_at).toLocaleString('en-NZ', {
+                timeZone: 'Pacific/Auckland',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : 'recent'
+          const cat = t.category ? ` · ${t.category}` : ''
+          return `- [${when}${cat}] ${t.handle ?? ''}: ${t.text ?? ''}`
+        })
+        .join('\n') || '(no recent official tweets)'
+
     const prompt = `You are a concise, factual weather briefing writer for a public emergency dashboard covering Tropical Cyclone Vaianu — a Category 2 sub-tropical cyclone approaching the northeast coast of New Zealand's North Island.
 
 Current time (NZST): ${nowNzt}
@@ -266,6 +320,9 @@ ${niwaBlock}
 
 STUFF LIVE BLOG (rolling coverage, most recent first):
 ${liveblogBlock}
+
+X / TWITTER — NZ OFFICIAL ACCOUNTS (civil defence, police, transport, MetService):
+${tweetsBlock}
 
 RECENT NEWS (RNZ, Stuff, NZH):
 ${newsBlock}
@@ -398,6 +455,7 @@ Return ONLY valid JSON, no markdown fences, no preamble.`
           warnings_count: warnings.length,
           liveblog_count: liveblog.length,
           niwa_days: niwa.length,
+          tweets_count: tweets.length,
         },
         ratings,
         seriousness: ratings.seriousness,

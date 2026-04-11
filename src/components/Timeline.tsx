@@ -11,6 +11,10 @@ import {
   ExternalLink,
   ChevronRight,
   ChevronDown,
+  MessageCircle,
+  Heart,
+  Repeat2,
+  Eye,
 } from 'lucide-react'
 import { useTimeline, type TimelineEvent, type TimelineKind } from '@/hooks/useTimeline'
 
@@ -27,6 +31,29 @@ const KIND_META: Record<
   river_rise: { label: 'River', icon: Waves },
   news: { label: 'News', icon: Newspaper },
   liveblog: { label: 'Liveblog', icon: Radio },
+  tweet: { label: 'X / Tweet', icon: MessageCircle },
+}
+
+function formatCount(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return String(n)
+}
+
+interface TweetMediaItem {
+  type?: string
+  thumbnail?: string
+  url?: string
+}
+
+interface TweetMeta {
+  author_name?: string
+  author_category?: string
+  engagement?: {
+    views?: number
+    likes?: number
+    retweets?: number
+  }
+  media?: TweetMediaItem[] | null
 }
 
 const SEV_BORDER: Record<string, string> = {
@@ -41,11 +68,24 @@ const SEV_DOT: Record<string, string> = {
   yellow: 'bg-yellow-400',
   info: 'bg-sky-400',
 }
-const SEV_CHIP: Record<string, string> = {
-  red: 'bg-red-500/20 border-red-500/40 text-red-200',
-  orange: 'bg-orange-500/20 border-orange-500/40 text-orange-200',
-  yellow: 'bg-yellow-500/20 border-yellow-500/40 text-yellow-200',
-  info: 'bg-white/5 border-white/15 text-white/60',
+
+// Chip colour is per-kind (not per-severity) so the eye can pick types apart
+// at a glance in the mixed "All" feed. Urgent severities get an override to
+// red/orange so a red NEMA alert still screams even though its kind colour is
+// crimson-ish anyway.
+const KIND_CHIP: Record<TimelineKind, string> = {
+  nema_alert: 'bg-red-500/15 border-red-500/40 text-red-200',
+  warning: 'bg-orange-500/15 border-orange-500/40 text-orange-200',
+  road_closure: 'bg-amber-500/15 border-amber-500/40 text-amber-200',
+  outage: 'bg-yellow-500/15 border-yellow-500/40 text-yellow-200',
+  river_rise: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-200',
+  tweet: 'bg-sky-500/15 border-sky-500/40 text-sky-200',
+  liveblog: 'bg-pink-500/15 border-pink-500/40 text-pink-200',
+  news: 'bg-violet-500/15 border-violet-500/40 text-violet-200',
+}
+const SEV_CHIP_OVERRIDE: Record<string, string | undefined> = {
+  red: 'bg-red-500/25 border-red-500/50 text-red-100',
+  orange: 'bg-orange-500/25 border-orange-500/50 text-orange-100',
 }
 
 function timeAgo(iso: string): string {
@@ -104,6 +144,14 @@ function EventRow({ event }: { event: TimelineEvent }) {
   const meta = KIND_META[event.kind] ?? { label: event.kind, icon: Clock }
   const Icon = meta.icon
   const hasBody = !!event.body
+  const isTweet = event.kind === 'tweet'
+  const tweetMeta = isTweet ? ((event.metadata ?? {}) as TweetMeta) : null
+  const engagement = tweetMeta?.engagement
+  const media = tweetMeta?.media?.filter((m) => m.thumbnail) ?? []
+  const chipClass =
+    SEV_CHIP_OVERRIDE[event.severity] ??
+    KIND_CHIP[event.kind] ??
+    'bg-white/5 border-white/15 text-white/60'
 
   return (
     <div
@@ -124,12 +172,20 @@ function EventRow({ event }: { event: TimelineEvent }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span
-                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-mono uppercase tracking-wider ${SEV_CHIP[event.severity] ?? SEV_CHIP.info}`}
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-mono uppercase tracking-wider ${chipClass}`}
               >
                 <Icon className="h-2.5 w-2.5" />
                 {meta.label}
               </span>
-              {event.region && (
+              {isTweet && tweetMeta?.author_name && (
+                <span className="text-[10px] text-white/85 font-semibold truncate max-w-[200px]">
+                  {tweetMeta.author_name}
+                </span>
+              )}
+              {isTweet && event.source && (
+                <span className="text-[9px] font-mono text-sky-400/80">{event.source}</span>
+              )}
+              {event.region && !isTweet && (
                 <span className="text-[9px] font-mono text-white/40 uppercase tracking-wider">
                   {event.region}
                 </span>
@@ -141,10 +197,75 @@ function EventRow({ event }: { event: TimelineEvent }) {
                 {formatNzt(event.occurred_at)}
               </span>
             </div>
-            <div className="text-[13px] text-white/90 font-semibold leading-snug group-hover:text-white transition-colors">
+            <div
+              className={`text-[13px] leading-snug transition-colors ${
+                isTweet
+                  ? 'text-white/85 font-normal group-hover:text-white/95'
+                  : 'text-white/90 font-semibold group-hover:text-white'
+              }`}
+            >
               {event.title}
             </div>
-            {event.source && (
+            {isTweet && media.length > 0 && (
+              <div className="mt-2 flex gap-1.5 flex-wrap">
+                {media.slice(0, 4).map((m, i) => (
+                  <a
+                    key={i}
+                    href={event.link ?? m.url ?? m.thumbnail}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="relative block h-20 w-28 overflow-hidden rounded border border-white/10 bg-white/5 hover:border-sky-400/50 transition-colors"
+                  >
+                    <img
+                      src={m.thumbnail}
+                      alt=""
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        ;(e.currentTarget.parentElement as HTMLElement).style.display = 'none'
+                      }}
+                    />
+                    {m.type && m.type !== 'photo' && (
+                      <span className="absolute bottom-0.5 right-0.5 text-[8px] font-mono uppercase bg-black/70 text-white/90 px-1 rounded">
+                        {m.type === 'animated_gif' ? 'gif' : m.type}
+                      </span>
+                    )}
+                  </a>
+                ))}
+              </div>
+            )}
+            {isTweet && engagement && (
+              <div className="flex items-center gap-3 mt-1.5 text-[9px] font-mono text-white/35 tabular-nums">
+                {typeof engagement.views === 'number' && engagement.views > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Eye className="h-2.5 w-2.5" /> {formatCount(engagement.views)}
+                  </span>
+                )}
+                {typeof engagement.likes === 'number' && engagement.likes > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Heart className="h-2.5 w-2.5" /> {formatCount(engagement.likes)}
+                  </span>
+                )}
+                {typeof engagement.retweets === 'number' && engagement.retweets > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Repeat2 className="h-2.5 w-2.5" /> {formatCount(engagement.retweets)}
+                  </span>
+                )}
+                {event.link && (
+                  <a
+                    href={event.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-1 text-sky-400/70 hover:text-sky-300"
+                  >
+                    View on X <ExternalLink className="h-2.5 w-2.5" />
+                  </a>
+                )}
+              </div>
+            )}
+            {!isTweet && event.source && (
               <div className="text-[9px] font-mono text-white/35 uppercase tracking-wider mt-0.5">
                 {event.source}
               </div>
@@ -184,6 +305,7 @@ const FILTER_BUTTONS: Array<{ key: FilterKey; label: string }> = [
   { key: 'warning', label: 'Warnings' },
   { key: 'road_closure', label: 'Roads' },
   { key: 'outage', label: 'Outages' },
+  { key: 'tweet', label: 'X / Tweets' },
   { key: 'news', label: 'News' },
   { key: 'liveblog', label: 'Liveblog' },
 ]

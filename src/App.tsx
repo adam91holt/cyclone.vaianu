@@ -38,6 +38,7 @@ import { StuffLiveblog } from '@/components/StuffLiveblog'
 import { FeedHealth } from '@/components/FeedHealth'
 import { CivilDefenceAlerts } from '@/components/CivilDefenceAlerts'
 import { Timeline } from '@/components/Timeline'
+import { RegionProvider } from '@/context/RegionContext'
 // Lazy-loaded — each carries a heavy dependency (hls.js, leaflet,
 // react-markdown) we don't want on the critical path.
 const WebcamsPanel = lazy(() =>
@@ -144,6 +145,7 @@ function App() {
   const moreTabActive = MOBILE_MORE_TABS.some((t) => t.key === tab)
 
   return (
+    <RegionProvider>
     <div className="min-h-screen bg-[#070b16] text-white selection:bg-red-500/30 overflow-x-hidden">
       <AlertBar />
       <Header />
@@ -409,6 +411,7 @@ function App() {
         </a>
       </footer>
     </div>
+    </RegionProvider>
   )
 }
 

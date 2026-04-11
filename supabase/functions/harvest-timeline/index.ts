@@ -51,6 +51,23 @@ function truncate(s: string | null | undefined, n: number): string | null {
   return t.length > n ? t.slice(0, n - 1) + '…' : t
 }
 
+// Some upstream sources (Stuff liveblog in particular) ship HTML-entity-
+// encoded apostrophes and quotes through their JSON-LD, e.g.
+//   "We&#x27;re so close to the ocean"
+// Decode on our way in so the timeline reads cleanly.
+function decodeEntities(s: string | null | undefined): string | null {
+  if (!s) return s ?? null
+  return s
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replaceAll('&quot;', '"')
+    .replaceAll('&amp;', '&')
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&apos;', "'")
+    .replaceAll('&nbsp;', ' ')
+}
+
 // --- NEMA alerts -------------------------------------------------------
 async function harvestNema(now: string): Promise<TimelineRow[]> {
   const { data, error } = await supabase
@@ -212,8 +229,8 @@ async function harvestNews(now: string): Promise<TimelineRow[]> {
       event_key: `news:${r.id}`,
       kind: 'news' as const,
       severity: 'info',
-      title: r.title!,
-      body: truncate(r.summary, 500),
+      title: decodeEntities(r.title)!,
+      body: truncate(decodeEntities(r.summary), 500),
       link: r.url,
       source: r.source ?? 'News',
       region: null,
@@ -221,6 +238,95 @@ async function harvestNews(now: string): Promise<TimelineRow[]> {
       metadata: r.image_url ? { image_url: r.image_url } : null,
       last_seen_at: now,
     }))
+}
+
+// --- X / Twitter feed from NZ official accounts ------------------------
+// cyclone-api.thecolab.ai aggregates posts from ~13 NZ weather / emergency /
+// transport / police accounts. We only include tweets from authoritative
+// accounts (civil defence, police, transport, MetService). For tweets we
+// don't bother storing body — the text is short enough to fit in title and
+// the link goes to X for the full thread/media.
+interface ColabTweetMedia {
+  type?: string
+  url?: string
+  thumbnail?: string
+}
+
+interface ColabTweet {
+  id: string
+  author: {
+    handle: string
+    name: string
+    category: string
+  }
+  created_at: string
+  text: string
+  url: string
+  is_reply: boolean
+  engagement?: { likes?: number; retweets?: number; views?: number }
+  media?: ColabTweetMedia[]
+}
+
+const TWEET_SEVERITY: Record<string, string> = {
+  civil_defence: 'yellow',
+  regional_cdem: 'yellow',
+  police: 'yellow',
+  transport: 'info',
+  weather: 'info',
+}
+
+async function harvestTweets(now: string): Promise<TimelineRow[]> {
+  const res = await fetch('https://cyclone-api.thecolab.ai/timeline?hours=48', {
+    headers: { 'User-Agent': 'vaianu-dashboard/1.0' },
+  })
+  if (!res.ok) throw new Error(`tweets: http ${res.status}`)
+  const body = (await res.json()) as { items?: ColabTweet[] }
+  const items = body.items ?? []
+  const nowMs = Date.now()
+
+  return items
+    .filter((t) => !t.is_reply && t.text && t.created_at)
+    .filter((t) => {
+      const ms = Date.parse(t.created_at)
+      return Number.isFinite(ms) && ms <= nowMs + 60_000
+    })
+    .map((t) => {
+      const severity = TWEET_SEVERITY[t.author.category] ?? 'info'
+      // Trim the X-style URL shorteners and pic.twitter links out of the title
+      // so the feed looks clean — the full thread is one click away.
+      const cleanText = t.text
+        .replace(/https:\/\/t\.co\/\w+/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+      // Keep only media with a usable thumbnail we can render; videos/GIFs
+      // from the API include a thumbnail frame, so this works for all types.
+      const media =
+        t.media
+          ?.filter((m) => m.thumbnail)
+          .map((m) => ({
+            type: m.type ?? 'photo',
+            thumbnail: m.thumbnail!,
+            url: m.url ?? m.thumbnail!,
+          })) ?? []
+      return {
+        event_key: `tweet:${t.id}`,
+        kind: 'tweet',
+        severity,
+        title: cleanText || t.text,
+        body: null,
+        link: t.url,
+        source: `@${t.author.handle}`,
+        region: null,
+        occurred_at: t.created_at,
+        metadata: {
+          author_name: t.author.name,
+          author_category: t.author.category,
+          engagement: t.engagement ?? null,
+          media: media.length > 0 ? media : null,
+        },
+        last_seen_at: now,
+      }
+    })
 }
 
 // --- Stuff liveblog posts (recent rolling coverage) --------------------
@@ -242,8 +348,8 @@ async function harvestLiveblog(now: string): Promise<TimelineRow[]> {
         event_key: `liveblog:${r.post_id}`,
         kind: 'liveblog',
         severity: 'info',
-        title: r.headline!,
-        body: truncate(r.body, 500),
+        title: decodeEntities(r.headline)!,
+        body: truncate(decodeEntities(r.body), 500),
         link: firstLink,
         source: 'Stuff liveblog',
         region: null,
@@ -270,12 +376,13 @@ Deno.serve(async (req) => {
       harvestOutages(now),
       harvestNews(now),
       harvestLiveblog(now),
+      harvestTweets(now),
     ])
 
     const rows: TimelineRow[] = []
     const errors: string[] = []
     const counts: Record<string, number> = {}
-    const kinds = ['nema', 'warnings', 'roads', 'outages', 'news', 'liveblog']
+    const kinds = ['nema', 'warnings', 'roads', 'outages', 'news', 'liveblog', 'tweets']
     results.forEach((r, i) => {
       if (r.status === 'fulfilled') {
         rows.push(...r.value)

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useLatestSummary } from '@/hooks/useSummary'
 import { useComprehensiveReports } from '@/hooks/useComprehensiveReports'
-import { Sparkles, ArrowRight, BookOpen } from 'lucide-react'
+import { Sparkles, ArrowRight, BookOpen, Globe } from 'lucide-react'
+import { useSelectedRegion } from '@/context/RegionContext'
 
 function timeAgo(iso: string) {
   const delta = Math.max(0, Date.now() - new Date(iso).getTime())
@@ -37,6 +38,7 @@ export function AIBriefing({ onOpenReport }: AIBriefingProps) {
   const { data: reports } = useComprehensiveReports(1)
   const latestReport = reports?.[0]
   const nextIn = useNextTick(15, summary?.generated_at ?? null)
+  const { label: regionLabel, isFiltered } = useSelectedRegion()
 
   const severityStyles: Record<string, string> = {
     red: 'from-red-600/20 to-red-900/10 border-red-500/30',
@@ -93,7 +95,13 @@ export function AIBriefing({ onOpenReport }: AIBriefingProps) {
           <h2 className="font-display text-xl sm:text-2xl font-bold leading-tight mb-2 text-white">
             {summary.headline}
           </h2>
-          <p className="text-sm text-white/80 leading-relaxed mb-4">{summary.summary}</p>
+          <p className="text-sm text-white/80 leading-relaxed mb-3">{summary.summary}</p>
+          {isFiltered && (
+            <div className="mb-3 flex items-center gap-1.5 text-[10px] text-white/50 font-mono uppercase tracking-wider">
+              <Globe className="h-3 w-3" />
+              Nationwide briefing · you're viewing {regionLabel}
+            </div>
+          )}
 
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {summary.key_points.map((point, i) => (

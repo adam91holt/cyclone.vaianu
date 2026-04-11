@@ -1,9 +1,11 @@
-import { Wind, Sparkles } from 'lucide-react'
+import { Wind, Sparkles, Globe, Navigation } from 'lucide-react'
 import { useCountdown } from '@/hooks/useCountdown'
 import { useLandfall, formatLandfallLabel } from '@/hooks/useLandfall'
 import { LiveViewers } from '@/components/LiveViewers'
 import { ShareButton } from '@/components/ShareButton'
 import { FeedbackButton } from '@/components/FeedbackButton'
+import { useSelectedRegion } from '@/context/RegionContext'
+import { cycloneDistanceToMainland } from '@/lib/cyclone'
 
 const CONFIDENCE_STYLES = {
   high: 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10',
@@ -14,6 +16,8 @@ const CONFIDENCE_STYLES = {
 export function Header() {
   const landfall = useLandfall()
   const countdown = useCountdown(landfall.iso)
+  const { label: regionLabel, isFiltered } = useSelectedRegion()
+  const distance = cycloneDistanceToMainland()
 
   return (
     <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-white/10">
@@ -43,6 +47,10 @@ export function Header() {
         </div>
 
         <div className="text-left sm:text-right sm:shrink-0 flex flex-col items-start sm:items-end">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.15em] font-mono text-amber-300/90 mb-1">
+            <Navigation className="h-2.5 w-2.5" />
+            <span>{distance.km.toLocaleString()} km to {distance.region.short}</span>
+          </div>
           <div className="text-[10px] uppercase tracking-[0.25em] text-white/50 mb-1">
             {countdown.isPast ? 'Landfall passed' : 'Landfall in'}
           </div>
@@ -52,6 +60,12 @@ export function Header() {
           <div className="text-[10px] uppercase tracking-wider text-white/40 mt-0.5">
             {formatLandfallLabel(landfall.iso)} · {landfall.region}
           </div>
+          {isFiltered && (
+            <div className="mt-1 flex items-center gap-1 text-[9px] font-mono uppercase tracking-[0.15em] text-white/35">
+              <Globe className="h-2.5 w-2.5" />
+              National figure · impact in {regionLabel} varies
+            </div>
+          )}
           {landfall.isAi && landfall.confidence && (
             <div
               className="group relative mt-1.5 cursor-help"

@@ -28,15 +28,21 @@ const FETCH_HEADERS = {
     'CycloneVaianu-Dashboard/1.0 (+https://thecolab.ai) volunteer cyclone response',
 }
 
-/** HTML entity decode for JSON-embedded-in-HTML-attribute. */
+/** HTML entity decode for JSON-embedded-in-HTML-attribute.
+ *  Handles named entities, decimal numeric (&#39;) and hex numeric (&#x27;)
+ *  — Stuff's feed emits the hex form for apostrophes, which slipped past the
+ *  original named-only decoder.
+ */
 function decodeHtmlEntities(s: string): string {
   return s
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
     .replaceAll('&quot;', '"')
     .replaceAll('&amp;', '&')
     .replaceAll('&lt;', '<')
     .replaceAll('&gt;', '>')
-    .replaceAll('&#39;', "'")
     .replaceAll('&apos;', "'")
+    .replaceAll('&nbsp;', ' ')
 }
 
 interface SharedLink {

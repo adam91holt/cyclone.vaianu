@@ -2,16 +2,24 @@ import { Wind, Compass, Droplets, Thermometer } from 'lucide-react'
 import { useMetServiceObservations } from '@/hooks/useMetServiceObservations'
 import { useRegionWeather } from '@/hooks/useWeather'
 import { REGIONS } from '@/lib/cyclone'
+import {
+  useSelectedRegion,
+  filterTownsByRegion,
+  filterRegionsByRegion,
+} from '@/context/RegionContext'
+import { RegionPicker } from '@/components/RegionPicker'
 
 export function HeroWind() {
   const { data: towns, isLoading: loadingTowns } = useMetServiceObservations()
   const { data: regions } = useRegionWeather()
+  const { regionId, label: regionLabel, isFiltered } = useSelectedRegion()
 
   // MetService — authoritative sustained wind. Find the town with the highest
-  // current wind speed.
-  const peak = (towns ?? [])
+  // current wind speed within the selected region (or nationwide).
+  const scopedTowns = filterTownsByRegion(towns, regionId)
+  const peak = scopedTowns
     .filter((t) => t.wind_speed_kmh !== null)
-    .reduce<NonNullable<typeof towns>[number] | null>(
+    .reduce<(typeof scopedTowns)[number] | null>(
       (max, t) =>
         max === null || (t.wind_speed_kmh ?? 0) > (max.wind_speed_kmh ?? 0)
           ? t
@@ -21,9 +29,9 @@ export function HeroWind() {
 
   // Open-Meteo — gust (MetService's localObs feed doesn't include gust, so we
   // cross-source the peak gust from the modelled regional weather).
-  const regionList = regions ?? []
-  type RegionRow = (typeof regionList)[number]
-  const peakGust = regionList.reduce<RegionRow | null>(
+  const scopedRegions = filterRegionsByRegion(regions, regionId)
+  type RegionRow = (typeof scopedRegions)[number]
+  const peakGust = scopedRegions.reduce<RegionRow | null>(
     (max, r) => (max === null || r.gustKmh > max.gustKmh ? r : max),
     null,
   )
@@ -32,18 +40,43 @@ export function HeroWind() {
       peakGust.regionId.toUpperCase())
     : '—'
 
+  // Label: "Peak Wind · Bay of Plenty · Tauranga" when filtered, else fall back
+  // to the nationwide "Peak Wind · <town>" form.
+  const headingLabel = isFiltered
+    ? `Peak Wind · ${regionLabel}${peak ? ` · ${peak.town_name}` : ''}`
+    : `Peak Wind · ${peak?.town_name ?? '—'}`
+
+  const emptyRegionMessage =
+    isFiltered && !loadingTowns && !peak
+      ? `No MetService station in ${regionLabel}`
+      : null
+
   return (
     <div className="relative h-full w-full overflow-hidden rounded-xl bg-gradient-to-br from-red-600 via-red-700 to-red-900 p-5 sm:p-6 border border-red-500/30 flex flex-col">
       <div className="relative z-10 flex flex-col h-full">
-        <div className="flex items-center gap-2 mb-2">
-          <Wind className="h-3 w-3 text-white/80" />
-          <div className="text-[10px] uppercase tracking-[0.25em] text-white/80 font-semibold">
-            Peak Wind · {peak?.town_name ?? '—'}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Wind className="h-3 w-3 text-white/80 shrink-0" />
+            <div className="text-[10px] uppercase tracking-[0.25em] text-white/80 font-semibold truncate">
+              {headingLabel}
+            </div>
+          </div>
+          <div className="shrink-0 -mt-0.5">
+            <RegionPicker />
           </div>
         </div>
 
-        {loadingTowns || !peak ? (
+        {loadingTowns ? (
           <div className="h-20 w-40 bg-white/10 rounded animate-pulse" />
+        ) : !peak ? (
+          <div className="flex-1 flex flex-col justify-center text-sm text-white/70 font-mono">
+            {emptyRegionMessage ?? 'No observation data'}
+            {emptyRegionMessage && (
+              <div className="mt-1 text-[10px] text-white/40">
+                Try a neighbouring region or switch to All NZ.
+              </div>
+            )}
+          </div>
         ) : (
           <>
             {/* Primary + gust stats side by side */}

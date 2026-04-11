@@ -2,6 +2,11 @@ import { Droplets, Gauge, Waves } from 'lucide-react'
 import { useRegionWeather } from '@/hooks/useWeather'
 import { useMarine } from '@/hooks/useMarine'
 import { useMetServiceObservations } from '@/hooks/useMetServiceObservations'
+import {
+  useSelectedRegion,
+  filterRegionsByRegion,
+  filterTownsByRegion,
+} from '@/context/RegionContext'
 
 function StatRow({
   label,
@@ -45,8 +50,9 @@ function StatRow({
 
 function RainfallPanel() {
   const { data, isLoading } = useMetServiceObservations()
+  const { regionId, label: regionLabel, isFiltered } = useSelectedRegion()
 
-  const towns = data ?? []
+  const towns = filterTownsByRegion(data, regionId)
   const withData = towns.filter((t) => t.rainfall_3h_mm !== null)
   const peakMm = withData.reduce(
     (max, t) => ((t.rainfall_3h_mm ?? 0) > max ? (t.rainfall_3h_mm ?? 0) : max),
@@ -59,6 +65,9 @@ function RainfallPanel() {
       <div className="flex items-center justify-between mb-1">
         <div className="text-[9px] uppercase tracking-widest text-white/50 font-semibold">
           Rainfall · Last 3 h · MetService
+          {isFiltered && (
+            <span className="ml-1.5 text-sky-300/80">· {regionLabel}</span>
+          )}
         </div>
         <Droplets className="h-3.5 w-3.5 text-white/30" />
       </div>
@@ -123,7 +132,9 @@ function RainfallPanel() {
         })}
         {towns.length === 0 && !isLoading && (
           <div className="col-span-full text-[10px] text-white/40 font-mono">
-            No observations available.
+            {isFiltered
+              ? `No MetService stations in ${regionLabel}.`
+              : 'No observations available.'}
           </div>
         )}
       </div>
@@ -134,12 +145,17 @@ function RainfallPanel() {
 export function StatCards() {
   const weather = useRegionWeather()
   const marine = useMarine()
+  const { regionId, label: regionLabel, isFiltered } = useSelectedRegion()
 
-  // Lowest pressure across regions — the cyclone's pressure trough.
-  const lowestPressure = weather.data?.reduce(
+  // Pressure — lowest across the selected region(s). When filtered to a
+  // single region it's just that region's value; nationwide it's the
+  // cyclone's pressure trough.
+  const scopedRegions = filterRegionsByRegion(weather.data, regionId)
+  const lowestPressure = scopedRegions.reduce(
     (min, r) => (r.pressureHpa < min ? r.pressureHpa : min),
     Infinity,
   )
+  const pressureSub = isFiltered ? regionLabel : 'Lowest across regions'
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 flex-1">
@@ -151,7 +167,7 @@ export function StatCards() {
             lowestPressure && lowestPressure !== Infinity ? lowestPressure : '—'
           }
           unit="hPa"
-          sub="Lowest across regions"
+          sub={pressureSub}
           icon={Gauge}
           loading={weather.isLoading}
         />

@@ -181,6 +181,43 @@ async function getLatestCycloneReport() {
   return data?.[0] ?? null
 }
 
+// Reads from the timeline_events table (already populated by harvest-timeline
+// every 5 min), filtering to X/Twitter posts from NZ civil defence, police,
+// transport and weather accounts. We only need the text + when + who — the
+// LLM can't see media, and the full thread is one click away via the URL.
+async function getTweets(input: { hours?: number; categories?: string[] }) {
+  const hours = input.hours ?? 12
+  const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
+  let query = supabase
+    .from('timeline_events')
+    .select('title, source, region, occurred_at, metadata')
+    .eq('kind', 'tweet')
+    .gte('occurred_at', cutoff)
+    .order('occurred_at', { ascending: false })
+    .limit(40)
+  const { data } = await query
+  const rows = (data ?? []).map((r) => {
+    const meta = (r.metadata ?? {}) as {
+      author_name?: string
+      author_category?: string
+      engagement?: { likes?: number; retweets?: number; views?: number }
+    }
+    return {
+      handle: r.source, // e.g. "@nzcivildefence"
+      author: meta.author_name ?? null,
+      category: meta.author_category ?? null,
+      text: (r.title ?? '').slice(0, 400),
+      published_at: r.occurred_at,
+      engagement: meta.engagement ?? null,
+    }
+  })
+  if (input.categories && input.categories.length > 0) {
+    const set = new Set(input.categories)
+    return rows.filter((r) => r.category && set.has(r.category))
+  }
+  return rows
+}
+
 async function getTimelineEvents(input: { kinds?: string[]; severity?: string }) {
   let query = supabase
     .from('timeline_events')
@@ -284,6 +321,26 @@ const tools: Anthropic.Messages.Tool[] = [
     input_schema: { type: 'object', properties: {} },
   },
   {
+    name: 'get_tweets',
+    description:
+      'Fetch recent X/Twitter posts from NZ official accounts — civil defence (@NZcivildefence, regional CDEM groups), police (@NZpolice), transport (@nzta_waka_kotahi, @AklTransport), and MetService. Useful for ground-truth situation updates: what civil defence is telling people to do, which roads police are closing, evacuation orders, confirmed damage. Text only — media is not visible to the model.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        hours: {
+          type: 'integer',
+          description: 'Look back this many hours (default 12).',
+        },
+        categories: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'Optional filter by account category: civil_defence, regional_cdem, police, transport, weather. Omit for all.',
+        },
+      },
+    },
+  },
+  {
     name: 'get_timeline_events',
     description:
       'Fetch the cross-source notable-events timeline (NEMA + warnings + closures + outages + liveblog deduped).',
@@ -350,6 +407,7 @@ const toolRunners: Record<string, (input: unknown) => Promise<unknown>> = {
   get_liveblog: () => getLiveblog(),
   get_niwa_forecast: () => getNiwaForecast(),
   get_latest_cyclone_report: () => getLatestCycloneReport(),
+  get_tweets: (i) => getTweets(i as { hours?: number; categories?: string[] }),
   get_timeline_events: (i) =>
     getTimelineEvents(i as { kinds?: string[]; severity?: string }),
 }
@@ -360,7 +418,7 @@ const toolRunners: Record<string, (input: unknown) => Promise<unknown>> = {
 
 const SYSTEM_PROMPT = `You are a senior situation analyst for a live NZ emergency-management dashboard covering Tropical Cyclone Vaianu — a sub-tropical cyclone affecting the upper North Island.
 
-Your job is to produce a COMPREHENSIVE hourly situation report that synthesizes every available data source: MetService warnings, NEMA civil defence alerts, live weather observations, NIWA forecasts, road closures, power outages, river gauges, news coverage, and the rolling Stuff liveblog.
+Your job is to produce a COMPREHENSIVE hourly situation report that synthesizes every available data source: MetService warnings, NEMA civil defence alerts, live weather observations, NIWA forecasts, road closures, power outages, river gauges, news coverage, the rolling Stuff liveblog, and live X/Twitter posts from NZ civil defence, police, transport and weather accounts.
 
 ## Methodology
 

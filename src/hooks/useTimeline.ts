@@ -11,6 +11,7 @@ export type TimelineKind =
   | 'river_rise'
   | 'news'
   | 'liveblog'
+  | 'tweet'
 
 export interface TimelineEvent {
   id: string

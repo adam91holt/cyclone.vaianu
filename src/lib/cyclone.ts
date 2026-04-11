@@ -134,6 +134,82 @@ export const CYCLONE_TRACK: CyclonePoint[] = [
 
 export const CURRENT_INDEX = 3 // index of "NOW" in CYCLONE_TRACK
 
+/** Haversine great-circle distance between two lat/lon points, in kilometres. */
+export function haversineKm(
+  aLat: number,
+  aLon: number,
+  bLat: number,
+  bLon: number,
+): number {
+  const R = 6371 // Earth radius (km)
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLat = toRad(bLat - aLat)
+  const dLon = toRad(bLon - aLon)
+  const lat1 = toRad(aLat)
+  const lat2 = toRad(bLat)
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(h))
+}
+
+/** Straight-line distance from the current cyclone centre to the nearest
+ *  canonical region's coastal town — a reasonable proxy for "distance to the
+ *  NZ mainland". Returns `{ km, region }` with the closest canonical region. */
+export function cycloneDistanceToMainland(): {
+  km: number
+  region: Region
+  bearing: number
+} {
+  const pos = CYCLONE_TRACK[CURRENT_INDEX]
+  let best: { km: number; region: Region } | null = null
+  for (const r of REGIONS) {
+    const km = haversineKm(pos.lat, pos.lon, r.lat, r.lon)
+    if (!best || km < best.km) best = { km, region: r }
+  }
+  const target = best!
+  // Forward bearing (degrees from true north) from cyclone → nearest region
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const toDeg = (r: number) => (r * 180) / Math.PI
+  const φ1 = toRad(pos.lat)
+  const φ2 = toRad(target.region.lat)
+  const Δλ = toRad(target.region.lon - pos.lon)
+  const y = Math.sin(Δλ) * Math.cos(φ2)
+  const x =
+    Math.cos(φ1) * Math.sin(φ2) -
+    Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ)
+  const bearing = (toDeg(Math.atan2(y, x)) + 360) % 360
+  return { km: Math.round(target.km), region: target.region, bearing }
+}
+
+/** MetService town slug → canonical cyclone region id. Towns outside the
+ *  6 canonical cyclone impact regions (Wellington, Napier, etc.) are omitted —
+ *  they're only visible in the nationwide "All NZ" view. */
+export const TOWN_TO_REGION: Record<string, string> = {
+  whangarei: 'northland',
+  kerikeri: 'northland',
+  auckland: 'auckland',
+  // No dedicated Coromandel MetService town — rolls up via Open-Meteo only.
+  tauranga: 'bay_of_plenty',
+  whakatane: 'bay_of_plenty',
+  rotorua: 'bay_of_plenty',
+  hamilton: 'waikato',
+  taupo: 'waikato',
+  gisborne: 'gisborne',
+}
+
+/** Options for the region selector. `'all'` is the nationwide default. */
+export interface RegionOption {
+  id: string
+  label: string
+  short: string
+}
+
+export const REGION_OPTIONS: RegionOption[] = [
+  { id: 'all', label: 'All NZ', short: 'ALL' },
+  ...REGIONS.map((r) => ({ id: r.id, label: r.name, short: r.short })),
+]
+
 export const WARNING_COLORS: Record<WarningLevel, { bg: string; text: string; label: string }> = {
   red: { bg: 'bg-red-600', text: 'text-red-400', label: 'RED' },
   orange: { bg: 'bg-amber-500', text: 'text-amber-400', label: 'ORANGE' },
