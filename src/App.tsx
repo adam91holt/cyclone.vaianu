@@ -18,6 +18,7 @@ import {
   X,
   Camera,
   Shield,
+  GitCommit,
 } from 'lucide-react'
 import { AlertBar } from '@/components/AlertBar'
 import { Header } from '@/components/Header'
@@ -49,6 +50,7 @@ import { AdminReports } from '@/components/AdminReports'
 import { SubmitReportFab } from '@/components/SubmitReportFab'
 import { TopReports } from '@/components/TopReports'
 import { EvacuationCentres } from '@/components/EvacuationCentres'
+import { Changelog } from '@/components/Changelog'
 // Lazy-loaded — each carries a heavy dependency (hls.js, leaflet,
 // react-markdown) we don't want on the critical path.
 const WebcamsPanel = lazy(() =>
@@ -84,6 +86,7 @@ type TabKey =
   | 'flights'
   | 'news'
   | 'archive'
+  | 'changelog'
   | 'api'
 
 interface TabDef {
@@ -115,6 +118,7 @@ const TABS: TabDef[] = [
   { key: 'flights', label: 'Flights', icon: Plane, sub: 'Live ADS-B', desktopOnly: true },
   { key: 'news', label: 'News', icon: Newspaper, sub: 'RNZ · Stuff · NZH' },
   { key: 'archive', label: 'Archive', icon: History, sub: 'All AI reports' },
+  { key: 'changelog', label: 'Changelog', icon: GitCommit, sub: 'What\u2019s changed · live from GitHub' },
   { key: 'api', label: 'Public API', icon: Terminal, sub: 'Summary endpoint', desktopOnly: true },
 ]
 
@@ -318,6 +322,8 @@ function App() {
             )}
 
             {tab === 'archive' && <SummaryHistory />}
+
+            {tab === 'changelog' && <Changelog />}
 
             {tab === 'api' && (
               <>
