@@ -65,6 +65,51 @@ export type Database = {
         }
         Relationships: []
       }
+      crowd_reports: {
+        Row: {
+          created_at: string | null
+          id: string
+          image_url: string | null
+          latitude: number | null
+          location_text: string
+          longitude: number | null
+          report_text: string
+          reviewed_at: string | null
+          reviewer_note: string | null
+          status: string
+          submitter_name: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          latitude?: number | null
+          location_text: string
+          longitude?: number | null
+          report_text: string
+          reviewed_at?: string | null
+          reviewer_note?: string | null
+          status?: string
+          submitter_name?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          latitude?: number | null
+          location_text?: string
+          longitude?: number | null
+          report_text?: string
+          reviewed_at?: string | null
+          reviewer_note?: string | null
+          status?: string
+          submitter_name?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       cyclone_summaries: {
         Row: {
           cyclone_lat: number | null

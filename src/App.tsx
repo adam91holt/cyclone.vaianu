@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react'
+// ^ useEffect is used for the moreOpen body-lock and the #admin hash listener
 import {
   LayoutDashboard,
   CloudRain,
@@ -15,6 +16,7 @@ import {
   Sparkles,
   MoreHorizontal,
   X,
+  Camera,
 } from 'lucide-react'
 import { AlertBar } from '@/components/AlertBar'
 import { Header } from '@/components/Header'
@@ -41,6 +43,8 @@ import { CivilDefenceAlerts } from '@/components/CivilDefenceAlerts'
 import { Timeline } from '@/components/Timeline'
 import { RegionProvider } from '@/context/RegionContext'
 import { SignupPopup } from '@/components/SignupPopup'
+import { CrowdReports } from '@/components/CrowdReports'
+import { AdminReports } from '@/components/AdminReports'
 // Lazy-loaded — each carries a heavy dependency (hls.js, leaflet,
 // react-markdown) we don't want on the critical path.
 const WebcamsPanel = lazy(() =>
@@ -70,6 +74,7 @@ type TabKey =
   | 'outages'
   | 'roads'
   | 'rivers'
+  | 'reports'
   | 'niwa'
   | 'flights'
   | 'news'
@@ -99,6 +104,7 @@ const TABS: TabDef[] = [
   { key: 'outages', label: 'Outages', icon: Zap, sub: 'Power · live', mobilePrimary: true },
   { key: 'roads', label: 'Roads', icon: Construction, sub: 'NZTA · live' },
   { key: 'rivers', label: 'Rivers', icon: Waves, sub: '1,700+ gauges · 10m' },
+  { key: 'reports', label: 'Ground Reports', icon: Camera, sub: 'Submit + photos' },
   { key: 'niwa', label: 'NIWA', icon: CloudSun, sub: '8-day + @NiwaWeather' },
   { key: 'flights', label: 'Flights', icon: Plane, sub: 'Live ADS-B', desktopOnly: true },
   { key: 'news', label: 'News', icon: Newspaper, sub: 'RNZ · Stuff · NZH' },
@@ -123,7 +129,23 @@ function TabLoading({ label }: { label: string }) {
 function App() {
   const [tab, setTab] = useState<TabKey>('dashboard')
   const [moreOpen, setMoreOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(
+    () => typeof window !== 'undefined' && window.location.hash === '#admin',
+  )
   const sectionRef = useRef<HTMLDivElement>(null)
+
+  // #admin in the URL bar flips us into the moderation view.
+  useEffect(() => {
+    function onHashChange() {
+      setIsAdmin(window.location.hash === '#admin')
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
+  if (isAdmin) {
+    return <AdminReports />
+  }
 
   const switchTab = useCallback((key: TabKey) => {
     setTab(key)
@@ -262,6 +284,8 @@ function App() {
                 <RiversMap />
               </Suspense>
             )}
+
+            {tab === 'reports' && <CrowdReports />}
 
             {tab === 'niwa' && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
