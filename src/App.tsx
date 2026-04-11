@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, lazy, Suspense } from 'react'
 import {
   LayoutDashboard,
   CloudRain,
@@ -30,8 +30,14 @@ import { NiwaForecast } from '@/components/NiwaForecast'
 import { NiwaTweets } from '@/components/NiwaTweets'
 import { StuffLiveblog } from '@/components/StuffLiveblog'
 import { FeedHealth } from '@/components/FeedHealth'
-import { WebcamsPanel } from '@/components/WebcamsPanel'
-import { OutagesMap } from '@/components/OutagesMap'
+// Lazy-loaded — each carries a heavy dependency (hls.js, leaflet) we don't
+// want on the critical path.
+const WebcamsPanel = lazy(() =>
+  import('@/components/WebcamsPanel').then((m) => ({ default: m.WebcamsPanel })),
+)
+const OutagesMap = lazy(() =>
+  import('@/components/OutagesMap').then((m) => ({ default: m.OutagesMap })),
+)
 
 type TabKey =
   | 'dashboard'
@@ -66,6 +72,17 @@ const TABS: TabDef[] = [
 ]
 
 const MOBILE_TABS = TABS.filter((t) => !t.desktopOnly)
+
+function TabLoading({ label }: { label: string }) {
+  return (
+    <div className="bg-[#0f1729]/80 border border-white/10 rounded-lg h-[520px] flex items-center justify-center">
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-white/50 font-mono">
+        <div className="h-3 w-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+        {label}
+      </div>
+    </div>
+  )
+}
 
 function App() {
   const [tab, setTab] = useState<TabKey>('dashboard')
@@ -162,9 +179,17 @@ function App() {
               </>
             )}
 
-            {tab === 'webcams' && <WebcamsPanel />}
+            {tab === 'webcams' && (
+              <Suspense fallback={<TabLoading label="Loading webcams…" />}>
+                <WebcamsPanel />
+              </Suspense>
+            )}
 
-            {tab === 'outages' && <OutagesMap />}
+            {tab === 'outages' && (
+              <Suspense fallback={<TabLoading label="Loading outages map…" />}>
+                <OutagesMap />
+              </Suspense>
+            )}
 
             {tab === 'niwa' && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
