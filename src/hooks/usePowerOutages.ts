@@ -11,8 +11,25 @@ export type OutageProvider =
   | 'horizon'
   | 'firstlight'
   | 'unison'
-export type OutageService = 'electricity' | 'fibre'
+  | 'onenz'
+  | '2degrees'
+export type OutageService = 'electricity' | 'fibre' | 'mobile'
 export type OutageStatus = 'unplanned' | 'planned'
+
+// Power companies vs mobile carriers. Used by the UI to filter the map and
+// by downstream logic that wants to treat the two classes separately.
+export const POWER_PROVIDERS: OutageProvider[] = [
+  'northpower',
+  'wel',
+  'topenergy',
+  'counties',
+  'vector',
+  'powerco',
+  'horizon',
+  'firstlight',
+  'unison',
+]
+export const CELL_PROVIDERS: OutageProvider[] = ['onenz', '2degrees']
 
 export interface PowerOutage {
   provider: OutageProvider
@@ -45,6 +62,7 @@ export interface PowerOutagesSummary {
     { incidents: number; customers: number; unplanned: number }
   >
   by_region: Record<string, { incidents: number; customers: number }>
+  by_service: Record<string, { incidents: number; customers: number }>
   providers_failed: string[]
   updated_at: string
 }
@@ -79,7 +97,7 @@ export function usePowerOutagesSummary() {
       const { data, error } = await supabase
         .from('power_outages_summary')
         .select(
-          'total_incidents, total_customers, by_provider, by_region, providers_failed, updated_at',
+          'total_incidents, total_customers, by_provider, by_region, by_service, providers_failed, updated_at',
         )
         .eq('id', 1)
         .maybeSingle()
@@ -90,6 +108,7 @@ export function usePowerOutagesSummary() {
         total_customers: data.total_customers,
         by_provider: (data.by_provider ?? {}) as PowerOutagesSummary['by_provider'],
         by_region: (data.by_region ?? {}) as PowerOutagesSummary['by_region'],
+        by_service: (data.by_service ?? {}) as PowerOutagesSummary['by_service'],
         providers_failed: (data.providers_failed ?? []) as string[],
         updated_at: data.updated_at,
       }

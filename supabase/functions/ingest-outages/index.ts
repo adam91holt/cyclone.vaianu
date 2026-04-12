@@ -67,6 +67,8 @@ const ADAPTERS = [
   'ingest-outages-horizon',
   'ingest-outages-firstlight',
   'ingest-outages-unison',
+  'ingest-outages-onenz',
+  'ingest-outages-2degrees',
 ] as const
 
 async function callAdapter(slug: string): Promise<AdapterResponse> {
@@ -172,7 +174,7 @@ async function upsertProvider(
 async function refreshSummary(providersFailed: string[]) {
   const { data, error } = await supabase
     .from('power_outages')
-    .select('provider, region, customer_count, status')
+    .select('provider, region, customer_count, status, service')
     .is('cleared_at', null)
 
   if (error) {
@@ -194,6 +196,13 @@ async function refreshSummary(providersFailed: string[]) {
     string,
     { incidents: number; customers: number }
   > = {}
+  // by_service breaks the total incident count down by service type
+  // (electricity / mobile / fibre / …) so the UI can show a single number
+  // without scanning the full outage list.
+  const byService: Record<
+    string,
+    { incidents: number; customers: number }
+  > = {}
   for (const r of rows) {
     const p = r.provider as string
     byProvider[p] ??= { incidents: 0, customers: 0, unplanned: 0 }
@@ -205,6 +214,11 @@ async function refreshSummary(providersFailed: string[]) {
     byRegion[region] ??= { incidents: 0, customers: 0 }
     byRegion[region].incidents += 1
     byRegion[region].customers += r.customer_count ?? 0
+
+    const service = ((r.service as string) || 'electricity').toLowerCase()
+    byService[service] ??= { incidents: 0, customers: 0 }
+    byService[service].incidents += 1
+    byService[service].customers += r.customer_count ?? 0
   }
 
   const { error: summaryError } = await supabase
@@ -215,6 +229,7 @@ async function refreshSummary(providersFailed: string[]) {
       total_customers: totalCustomers,
       by_provider: byProvider,
       by_region: byRegion,
+      by_service: byService,
       providers_failed: providersFailed,
       updated_at: new Date().toISOString(),
     })

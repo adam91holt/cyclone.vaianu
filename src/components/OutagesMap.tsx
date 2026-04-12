@@ -11,10 +11,12 @@ import 'leaflet/dist/leaflet.css'
 import {
   usePowerOutages,
   usePowerOutagesSummary,
+  POWER_PROVIDERS,
+  CELL_PROVIDERS,
   type PowerOutage,
   type OutageProvider,
 } from '@/hooks/usePowerOutages'
-import { AlertTriangle, Zap, Users, Clock } from 'lucide-react'
+import { AlertTriangle, Zap, Users, Clock, Signal } from 'lucide-react'
 
 // Provider visual identity. We pick distinctive, readable colours —
 // red for Northpower (matches their brand), blue for WEL, amber for
@@ -30,6 +32,10 @@ const PROVIDER_COLOURS: Record<OutageProvider, string> = {
   horizon: '#84cc16', // lime-500
   firstlight: '#f97316', // orange-500
   unison: '#06b6d4', // cyan-500
+  // Cell carriers — brand-adjacent colours distinct from the electricity
+  // palette above so mobile markers read as a separate layer at a glance.
+  onenz: '#dc2626', // One NZ red (deeper than Northpower to keep them apart)
+  '2degrees': '#fbbf24', // 2degrees amber-yellow
 }
 
 const PROVIDER_LABELS: Record<OutageProvider, string> = {
@@ -42,9 +48,11 @@ const PROVIDER_LABELS: Record<OutageProvider, string> = {
   horizon: 'Horizon Networks',
   firstlight: 'Firstlight',
   unison: 'Unison Networks',
+  onenz: 'One NZ',
+  '2degrees': '2degrees',
 }
 
-const PROVIDER_COUNT = 9
+const PROVIDER_COUNT = 11
 
 function formatTime(iso: string | null): string | null {
   if (!iso) return null
@@ -134,17 +142,35 @@ function OutagePopup({ outage }: OutagePopupProps) {
 }
 
 type ProviderFilter = 'all' | OutageProvider
+type ServiceFilter = 'all' | 'power' | 'cell'
+
+const POWER_SET = new Set<OutageProvider>(POWER_PROVIDERS)
+const CELL_SET = new Set<OutageProvider>(CELL_PROVIDERS)
 
 export function OutagesMap() {
   const { data: outages, isLoading, error } = usePowerOutages()
   const { data: summary } = usePowerOutagesSummary()
   const [filter, setFilter] = useState<ProviderFilter>('all')
+  const [serviceFilter, setServiceFilter] = useState<ServiceFilter>('all')
+
+  // Apply service filter first, then provider filter. The provider filter
+  // chips only show providers that match the current service, so it's
+  // impossible to pick an invalid combination.
+  const scoped = useMemo(() => {
+    if (!outages) return []
+    if (serviceFilter === 'power') {
+      return outages.filter((o) => POWER_SET.has(o.provider))
+    }
+    if (serviceFilter === 'cell') {
+      return outages.filter((o) => CELL_SET.has(o.provider))
+    }
+    return outages
+  }, [outages, serviceFilter])
 
   const filtered = useMemo(() => {
-    if (!outages) return []
-    if (filter === 'all') return outages
-    return outages.filter((o) => o.provider === filter)
-  }, [outages, filter])
+    if (filter === 'all') return scoped
+    return scoped.filter((o) => o.provider === filter)
+  }, [scoped, filter])
 
   const polygonOutages = filtered.filter(
     (o) =>
@@ -160,15 +186,15 @@ export function OutagesMap() {
           o.geometry.type !== 'MultiPolygon')),
   )
 
-  // Counts are computed from the live (unplanned-only) list so the header
-  // stays consistent with what's on the map, regardless of which provider
-  // filter is active.
-  const totalCustomers = (outages ?? []).reduce(
+  // Counts reflect the current service scope so the stats line up with
+  // what's on the map — if you toggle to Cell the "customers off" number
+  // stops counting power customers, etc.
+  const totalCustomers = scoped.reduce(
     (sum, o) => sum + (o.customer_count ?? 0),
     0,
   )
-  const totalIncidents = outages?.length ?? 0
-  const providerCounts = (outages ?? []).reduce<
+  const totalIncidents = scoped.length
+  const providerCounts = scoped.reduce<
     Record<string, { incidents: number; customers: number }>
   >((acc, o) => {
     const p = o.provider
@@ -179,6 +205,24 @@ export function OutagesMap() {
   }, {})
   const providersFailed = summary?.providers_failed ?? []
 
+  // Cell towers dominate the display when their incident count is high
+  // but their customer count is null — surface site count instead when
+  // the current scope is cell-only.
+  const cellSiteCount = (outages ?? []).filter((o) =>
+    CELL_SET.has(o.provider),
+  ).length
+  const powerCustomers = (outages ?? [])
+    .filter((o) => POWER_SET.has(o.provider))
+    .reduce((sum, o) => sum + (o.customer_count ?? 0), 0)
+
+  // Which provider chips appear depends on the service scope.
+  const visibleProviders: OutageProvider[] =
+    serviceFilter === 'cell'
+      ? CELL_PROVIDERS
+      : serviceFilter === 'power'
+        ? POWER_PROVIDERS
+        : [...POWER_PROVIDERS, ...CELL_PROVIDERS]
+
   return (
     <div className="space-y-3">
       {/* Summary header */}
@@ -187,7 +231,7 @@ export function OutagesMap() {
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-amber-400" />
             <div className="text-[10px] uppercase tracking-[0.2em] text-white/50 font-semibold">
-              Live Power Outages · Upper North Island
+              Live Power &amp; Cell Outages · Nationwide
             </div>
             {summary?.updated_at && (
               <div className="text-[9px] uppercase tracking-wider text-white/30 font-mono">
@@ -195,60 +239,91 @@ export function OutagesMap() {
               </div>
             )}
           </div>
-          <div className="flex gap-1 flex-wrap">
+          {/* Service scope — Power / Cell / All */}
+          <div className="flex gap-1">
             {(
               [
-                'all',
-                'northpower',
-                'wel',
-                'topenergy',
-                'counties',
-                'vector',
-                'powerco',
-                'horizon',
-                'firstlight',
-                'unison',
-              ] as ProviderFilter[]
-            ).map(
-              (key) => {
-                const active = filter === key
-                const label =
-                  key === 'all' ? 'All' : PROVIDER_LABELS[key as OutageProvider]
-                const colour =
-                  key === 'all' ? '#ffffff' : PROVIDER_COLOURS[key as OutageProvider]
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setFilter(key)}
-                    className={`text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded border transition-colors ${
-                      active
-                        ? 'bg-white/15 border-white/30 text-white'
-                        : 'bg-transparent border-white/10 text-white/50 hover:text-white/80 hover:border-white/20'
-                    }`}
-                  >
-                    {key !== 'all' && (
-                      <span
-                        className="inline-block h-1.5 w-1.5 rounded-full mr-1.5 align-middle"
-                        style={{ backgroundColor: colour }}
-                      />
-                    )}
-                    {label}
-                  </button>
-                )
-              },
-            )}
+                { key: 'all', label: 'All', icon: null },
+                { key: 'power', label: 'Power', icon: Zap },
+                { key: 'cell', label: 'Cell', icon: Signal },
+              ] as const
+            ).map(({ key, label, icon: Icon }) => {
+              const active = serviceFilter === key
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => {
+                    setServiceFilter(key)
+                    setFilter('all')
+                  }}
+                  className={`text-[10px] uppercase tracking-wider font-bold px-3 py-1 rounded-md border transition-colors flex items-center gap-1.5 ${
+                    active
+                      ? 'bg-amber-400/10 border-amber-400/40 text-amber-200'
+                      : 'bg-transparent border-white/10 text-white/50 hover:text-white/80 hover:border-white/20'
+                  }`}
+                >
+                  {Icon && <Icon className="h-3 w-3" />}
+                  {label}
+                </button>
+              )
+            })}
           </div>
         </div>
 
+        {/* Provider chips scoped to current service */}
+        <div className="flex gap-1 flex-wrap mb-3">
+          <button
+            type="button"
+            onClick={() => setFilter('all')}
+            className={`text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded border transition-colors ${
+              filter === 'all'
+                ? 'bg-white/15 border-white/30 text-white'
+                : 'bg-transparent border-white/10 text-white/50 hover:text-white/80 hover:border-white/20'
+            }`}
+          >
+            All providers
+          </button>
+          {visibleProviders.map((key) => {
+            const active = filter === key
+            const colour = PROVIDER_COLOURS[key]
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setFilter(key)}
+                className={`text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded border transition-colors ${
+                  active
+                    ? 'bg-white/15 border-white/30 text-white'
+                    : 'bg-transparent border-white/10 text-white/50 hover:text-white/80 hover:border-white/20'
+                }`}
+              >
+                <span
+                  className="inline-block h-1.5 w-1.5 rounded-full mr-1.5 align-middle"
+                  style={{ backgroundColor: colour }}
+                />
+                {PROVIDER_LABELS[key]}
+              </button>
+            )
+          })}
+        </div>
+
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {serviceFilter === 'cell' ? (
+            <Stat
+              label="Cell sites down"
+              value={totalIncidents.toLocaleString()}
+              accent="text-amber-300"
+            />
+          ) : (
+            <Stat
+              label="Customers off"
+              value={totalCustomers.toLocaleString()}
+              accent="text-amber-300"
+            />
+          )}
           <Stat
-            label="Customers off"
-            value={totalCustomers.toLocaleString()}
-            accent="text-amber-300"
-          />
-          <Stat
-            label="Live faults"
+            label={serviceFilter === 'cell' ? 'Live faults' : 'Live faults'}
             value={totalIncidents.toString()}
             accent="text-red-300"
           />
@@ -276,6 +351,30 @@ export function OutagesMap() {
           />
         </div>
 
+        {/* Quick glance: power vs cell split when both are in scope */}
+        {serviceFilter === 'all' && (outages?.length ?? 0) > 0 && (
+          <div className="mt-3 grid grid-cols-2 gap-3 border-t border-white/5 pt-3">
+            <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-white/60">
+              <Zap className="h-3 w-3 text-amber-400" />
+              Power:{' '}
+              <span className="text-amber-300 font-bold">
+                {powerCustomers.toLocaleString()}
+              </span>{' '}
+              customers off across{' '}
+              <span className="text-white font-bold">
+                {(outages ?? []).filter((o) => POWER_SET.has(o.provider)).length}
+              </span>{' '}
+              faults
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-white/60">
+              <Signal className="h-3 w-3 text-cyan-400" />
+              Cell:{' '}
+              <span className="text-cyan-300 font-bold">{cellSiteCount}</span>{' '}
+              sites affected
+            </div>
+          </div>
+        )}
+
         {providersFailed.length > 0 && (
           <div className="mt-3 flex items-center gap-2 text-[10px] text-red-300 font-mono uppercase tracking-wider">
             <AlertTriangle className="h-3 w-3" />
@@ -284,7 +383,7 @@ export function OutagesMap() {
         )}
 
         <div className="mt-3 text-[10px] text-white/40 font-mono uppercase tracking-wider border-t border-white/5 pt-2">
-          North Island coverage: Northland · Auckland · Waikato · Coromandel · Bay of Plenty · Gisborne · East Coast · Hawke's Bay · Taranaki · Wairarapa
+          Power: 9 lines companies (North Island) &nbsp;·&nbsp; Cell: One NZ + 2degrees (nationwide)
         </div>
       </div>
 
@@ -303,8 +402,8 @@ export function OutagesMap() {
         {!isLoading && !error && (
           <div className="h-[520px] relative">
             <MapContainer
-              center={[-37.0, 174.8]}
-              zoom={7}
+              center={[-39.0, 174.8]}
+              zoom={6}
               style={{ height: '100%', width: '100%', background: '#0a1020' }}
               scrollWheelZoom
             >
@@ -340,17 +439,36 @@ export function OutagesMap() {
             </MapContainer>
 
             {/* Legend */}
-            <div className="absolute bottom-3 left-3 z-[400] bg-[#0f1729]/95 border border-white/10 rounded-md px-3 py-2 text-[10px] font-mono uppercase tracking-wider text-white/70 space-y-1 pointer-events-none">
+            <div className="absolute bottom-3 left-3 z-[400] bg-[#0f1729]/95 border border-white/10 rounded-md px-3 py-2 text-[10px] font-mono uppercase tracking-wider text-white/70 space-y-1 pointer-events-none max-h-[400px] overflow-auto">
               <div className="text-white/40 mb-1">Legend</div>
-              <LegendRow colour={PROVIDER_COLOURS.northpower} label="Northpower" />
-              <LegendRow colour={PROVIDER_COLOURS.wel} label="WEL Networks" />
-              <LegendRow colour={PROVIDER_COLOURS.topenergy} label="Top Energy" />
-              <LegendRow colour={PROVIDER_COLOURS.counties} label="Counties Energy" />
-              <LegendRow colour={PROVIDER_COLOURS.vector} label="Vector" />
-              <LegendRow colour={PROVIDER_COLOURS.powerco} label="Powerco" />
-              <LegendRow colour={PROVIDER_COLOURS.horizon} label="Horizon Networks" />
-              <LegendRow colour={PROVIDER_COLOURS.firstlight} label="Firstlight" />
-              <LegendRow colour={PROVIDER_COLOURS.unison} label="Unison Networks" />
+              {(serviceFilter === 'all' || serviceFilter === 'power') && (
+                <>
+                  <div className="text-white/30 pt-1 border-t border-white/10 mt-1 flex items-center gap-1">
+                    <Zap className="h-2.5 w-2.5" /> Power
+                  </div>
+                  {POWER_PROVIDERS.map((p) => (
+                    <LegendRow
+                      key={p}
+                      colour={PROVIDER_COLOURS[p]}
+                      label={PROVIDER_LABELS[p]}
+                    />
+                  ))}
+                </>
+              )}
+              {(serviceFilter === 'all' || serviceFilter === 'cell') && (
+                <>
+                  <div className="text-white/30 pt-1 border-t border-white/10 mt-1 flex items-center gap-1">
+                    <Signal className="h-2.5 w-2.5" /> Cell
+                  </div>
+                  {CELL_PROVIDERS.map((p) => (
+                    <LegendRow
+                      key={p}
+                      colour={PROVIDER_COLOURS[p]}
+                      label={PROVIDER_LABELS[p]}
+                    />
+                  ))}
+                </>
+              )}
               <div className="text-white/40 pt-1 border-t border-white/10 mt-1">
                 Unplanned faults only
               </div>

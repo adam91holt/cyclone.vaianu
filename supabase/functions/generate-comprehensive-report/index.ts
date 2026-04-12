@@ -108,15 +108,36 @@ async function getRoadClosures() {
   return data ?? []
 }
 
-async function getPowerOutages(input: { min_customers?: number }) {
+async function getPowerOutages(input: {
+  min_customers?: number
+  service?: 'electricity' | 'mobile' | 'all'
+}) {
+  const service = input.service ?? 'all'
   const min = input.min_customers ?? 100
-  const { data } = await supabase
+  // Electricity outages have customer counts and we filter to the biggest.
+  // Mobile outages from the carriers don't expose customer_count, so the
+  // min_customers filter would drop every row — we skip it for mobile and
+  // let the LLM rank them by locality and area instead.
+  let query = supabase
     .from('power_outages')
-    .select('provider, region, localities, customer_count, cause, status, start_time')
+    .select(
+      'provider, service, region, localities, customer_count, cause, status, start_time',
+    )
     .is('cleared_at', null)
-    .gte('customer_count', min)
-    .order('customer_count', { ascending: false })
-    .limit(30)
+  if (service === 'electricity') {
+    query = query.eq('service', 'electricity').gte('customer_count', min)
+  } else if (service === 'mobile') {
+    query = query.eq('service', 'mobile')
+  } else {
+    // all — apply the customer floor only to electricity rows. We do that
+    // client-side because PostgREST can't express the OR cleanly.
+    query = query.or(
+      `and(service.eq.electricity,customer_count.gte.${min}),service.eq.mobile`,
+    )
+  }
+  const { data } = await query
+    .order('customer_count', { ascending: false, nullsFirst: false })
+    .limit(50)
   return data ?? []
 }
 
@@ -271,13 +292,20 @@ const tools: Anthropic.Messages.Tool[] = [
   {
     name: 'get_power_outages',
     description:
-      'Fetch current power outages nationwide, filtered by minimum customers affected.',
+      'Fetch current electricity AND mobile/cell outages nationwide. Each row includes a `service` field: "electricity" (lines companies — Northpower, Vector, Powerco, Horizon, Firstlight, Unison, etc.) or "mobile" (cell tower outages from One NZ and 2degrees). Electricity rows include customer_count; mobile rows do not (carriers don\'t publish it) so are returned regardless of the min_customers filter.',
     input_schema: {
       type: 'object',
       properties: {
         min_customers: {
           type: 'integer',
-          description: 'Minimum customer count to include (default 100).',
+          description:
+            'Minimum customer count to include for electricity rows (default 100). Does not apply to mobile/cell outages.',
+        },
+        service: {
+          type: 'string',
+          enum: ['electricity', 'mobile', 'all'],
+          description:
+            'Filter by service type. "all" returns both (default). Use "mobile" when the user specifically wants cell tower / network outages.',
         },
       },
     },
@@ -401,7 +429,10 @@ const toolRunners: Record<string, (input: unknown) => Promise<unknown>> = {
   get_civil_defence_alerts: () => getCivilDefenceAlerts(),
   get_regional_weather: () => getRegionalWeather(),
   get_road_closures: () => getRoadClosures(),
-  get_power_outages: (i) => getPowerOutages(i as { min_customers?: number }),
+  get_power_outages: (i) =>
+    getPowerOutages(
+      i as { min_customers?: number; service?: 'electricity' | 'mobile' | 'all' },
+    ),
   get_river_status: () => getRiverStatus(),
   get_recent_news: (i) => getRecentNews(i as { hours?: number }),
   get_liveblog: () => getLiveblog(),
@@ -418,7 +449,7 @@ const toolRunners: Record<string, (input: unknown) => Promise<unknown>> = {
 
 const SYSTEM_PROMPT = `You are a senior situation analyst for a live NZ emergency-management dashboard covering Tropical Cyclone Vaianu — a sub-tropical cyclone affecting the upper North Island.
 
-Your job is to produce a COMPREHENSIVE hourly situation report that synthesizes every available data source: MetService warnings, NEMA civil defence alerts, live weather observations, NIWA forecasts, road closures, power outages, river gauges, news coverage, the rolling Stuff liveblog, and live X/Twitter posts from NZ civil defence, police, transport and weather accounts.
+Your job is to produce a COMPREHENSIVE hourly situation report that synthesizes every available data source: MetService warnings, NEMA civil defence alerts, live weather observations, NIWA forecasts, road closures, power outages (electricity lines companies AND mobile/cell network outages from One NZ and 2degrees via get_power_outages), river gauges, news coverage, the rolling Stuff liveblog, and live X/Twitter posts from NZ civil defence, police, transport and weather accounts.
 
 ## Methodology
 
@@ -433,7 +464,7 @@ Your job is to produce a COMPREHENSIVE hourly situation report that synthesizes 
 - **Audience**: the general public, plus emergency planners who want a quick single-pane briefing.
 - **Tone**: factual, calm, authoritative. No speculation. No editorialising.
 - **Specificity**: every paragraph must name actual regions, roads, towns, customer counts, wind speeds, river levels, etc. — taken from tool results.
-- **Coverage**: current situation → regional impacts → active warnings → infrastructure status (roads, power, rivers) → public safety advice → outlook.
+- **Coverage**: current situation → regional impacts → active warnings → infrastructure status (roads, power, cell coverage, rivers) → public safety advice → outlook. Call get_power_outages at least twice — once with service="electricity" and once with service="mobile" — so you can report cell coverage gaps separately from power customer counts.
 - **Length**: 600-1500 words of markdown. Use section headings (##) and bullet lists freely.
 - **Severity**: match the highest active warning level across regions.
 - **Key findings**: 5-8 standalone bullets. Must be comprehensible on their own without reading the full markdown.

@@ -800,6 +800,7 @@ export type Database = {
         Row: {
           by_provider: Json
           by_region: Json
+          by_service: Json
           id: number
           providers_failed: string[]
           total_customers: number
@@ -809,6 +810,7 @@ export type Database = {
         Insert: {
           by_provider?: Json
           by_region?: Json
+          by_service?: Json
           id?: number
           providers_failed?: string[]
           total_customers?: number
@@ -818,6 +820,7 @@ export type Database = {
         Update: {
           by_provider?: Json
           by_region?: Json
+          by_service?: Json
           id?: number
           providers_failed?: string[]
           total_customers?: number
