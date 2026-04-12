@@ -1014,6 +1014,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_all_river_histories: {
+        Args: { p_buckets?: number; p_hours?: number }
+        Returns: {
+          buckets: Json
+          council: string
+          site: string
+        }[]
+      }
       get_feed_health: {
         Args: never
         Returns: {
@@ -1038,6 +1046,18 @@ export type Database = {
           temp_c: number
           wind_direction_deg: number
           wind_kmh: number
+        }[]
+      }
+      get_river_history: {
+        Args: { p_council: string; p_hours?: number; p_site: string }
+        Returns: {
+          council_name: string
+          latitude: number
+          longitude: number
+          name: string
+          ts: string
+          unit: string
+          value: number
         }[]
       }
       get_river_summary: {
