@@ -298,12 +298,12 @@ export function ComprehensiveReport() {
           </div>
         </div>
         <div className="text-[9px] font-mono uppercase tracking-wider text-white/40">
-          Hourly · agentic tool use
+          Every 6 hours · agentic tool use
         </div>
       </div>
 
       <div className="mb-4 text-[11px] text-white/50 leading-relaxed">
-        A deep synthesis generated every hour. Claude Opus 4.6 runs an agentic loop — it
+        A deep synthesis generated every 6 hours. Claude Opus 4.6 runs an agentic loop — it
         calls tools against MetService warnings, NEMA alerts, NIWA forecasts, roads, power
         outages, rivers, news feeds, and the live timeline — then writes the full report
         from the data it gathered.

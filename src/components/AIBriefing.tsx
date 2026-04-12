@@ -37,7 +37,7 @@ export function AIBriefing({ onOpenReport }: AIBriefingProps) {
   const { data: summary, isLoading } = useLatestSummary()
   const { data: reports } = useComprehensiveReports(1)
   const latestReport = reports?.[0]
-  const nextIn = useNextTick(15, summary?.generated_at ?? null)
+  const nextIn = useNextTick(180, summary?.generated_at ?? null)
   const { label: regionLabel, isFiltered } = useSelectedRegion()
 
   const severityStyles: Record<string, string> = {
@@ -62,7 +62,7 @@ export function AIBriefing({ onOpenReport }: AIBriefingProps) {
               AI Situation Report
             </div>
             <div className="text-[9px] text-white/40 font-mono uppercase tracking-wider">
-              Claude Sonnet 4.6 · 15-min rollups
+              Claude Sonnet 4.6 · 3-hour rollups
             </div>
           </div>
         </div>
@@ -147,7 +147,7 @@ export function AIBriefing({ onOpenReport }: AIBriefingProps) {
 
       {!isLoading && !summary && (
         <div className="text-sm text-white/60">
-          Preparing first briefing — new rollup every 15 minutes.
+          Preparing first briefing — new rollup every 3 hours.
         </div>
       )}
     </div>
