@@ -68,7 +68,7 @@ function Card({ site, spark, onClick }: CardProps) {
     <button
       type="button"
       onClick={onClick}
-      className={`group relative flex-shrink-0 w-[220px] sm:w-auto text-left rounded-lg border ${severityStyles} p-3 transition-all hover:border-white/30 hover:bg-white/[0.04] active:scale-[0.98]`}
+      className={`group relative flex-shrink-0 w-[220px] sm:w-full sm:min-w-0 text-left rounded-lg border ${severityStyles} p-3 transition-all hover:border-white/30 hover:bg-white/[0.04] active:scale-[0.98]`}
     >
       <div className="flex items-start justify-between gap-2 mb-1">
         <div className="min-w-0 flex-1">
