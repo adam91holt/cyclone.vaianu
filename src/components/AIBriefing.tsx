@@ -14,19 +14,19 @@ function timeAgo(iso: string) {
 }
 
 function useNextTick(intervalMin: number, lastIso: string | null) {
-  // Return "countdown to next 15-min rollup" based on the last summary time.
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000)
+    const id = setInterval(() => setNow(Date.now()), 60_000)
     return () => clearInterval(id)
   }, [])
   if (!lastIso) return null
   const last = new Date(lastIso).getTime()
   const next = last + intervalMin * 60_000
   const remaining = Math.max(0, next - now)
-  const mins = Math.floor(remaining / 60_000)
-  const secs = Math.floor((remaining % 60_000) / 1000)
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  const hours = Math.floor(remaining / 3_600_000)
+  const mins = Math.floor((remaining % 3_600_000) / 60_000)
+  if (hours > 0) return `${hours}h ${mins}m`
+  return `${mins}m`
 }
 
 interface AIBriefingProps {
