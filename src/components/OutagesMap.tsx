@@ -27,6 +27,9 @@ const PROVIDER_COLOURS: Record<OutageProvider, string> = {
   counties: '#a855f7', // purple-500
   vector: '#14b8a6', // teal-500
   powerco: '#ec4899', // pink-500
+  horizon: '#84cc16', // lime-500
+  firstlight: '#f97316', // orange-500
+  unison: '#06b6d4', // cyan-500
 }
 
 const PROVIDER_LABELS: Record<OutageProvider, string> = {
@@ -36,9 +39,12 @@ const PROVIDER_LABELS: Record<OutageProvider, string> = {
   counties: 'Counties Energy',
   vector: 'Vector',
   powerco: 'Powerco',
+  horizon: 'Horizon Networks',
+  firstlight: 'Firstlight',
+  unison: 'Unison Networks',
 }
 
-const PROVIDER_COUNT = 6
+const PROVIDER_COUNT = 9
 
 function formatTime(iso: string | null): string | null {
   if (!iso) return null
@@ -199,6 +205,9 @@ export function OutagesMap() {
                 'counties',
                 'vector',
                 'powerco',
+                'horizon',
+                'firstlight',
+                'unison',
               ] as ProviderFilter[]
             ).map(
               (key) => {
@@ -275,7 +284,7 @@ export function OutagesMap() {
         )}
 
         <div className="mt-3 text-[10px] text-white/40 font-mono uppercase tracking-wider border-t border-white/5 pt-2">
-          North Island coverage: Northland · Auckland · Waikato · Coromandel · Bay of Plenty · Taranaki · Wairarapa
+          North Island coverage: Northland · Auckland · Waikato · Coromandel · Bay of Plenty · Gisborne · East Coast · Hawke's Bay · Taranaki · Wairarapa
         </div>
       </div>
 
@@ -339,6 +348,9 @@ export function OutagesMap() {
               <LegendRow colour={PROVIDER_COLOURS.counties} label="Counties Energy" />
               <LegendRow colour={PROVIDER_COLOURS.vector} label="Vector" />
               <LegendRow colour={PROVIDER_COLOURS.powerco} label="Powerco" />
+              <LegendRow colour={PROVIDER_COLOURS.horizon} label="Horizon Networks" />
+              <LegendRow colour={PROVIDER_COLOURS.firstlight} label="Firstlight" />
+              <LegendRow colour={PROVIDER_COLOURS.unison} label="Unison Networks" />
               <div className="text-white/40 pt-1 border-t border-white/10 mt-1">
                 Unplanned faults only
               </div>

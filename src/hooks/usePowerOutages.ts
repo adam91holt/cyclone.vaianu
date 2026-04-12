@@ -8,6 +8,9 @@ export type OutageProvider =
   | 'counties'
   | 'vector'
   | 'powerco'
+  | 'horizon'
+  | 'firstlight'
+  | 'unison'
 export type OutageService = 'electricity' | 'fibre'
 export type OutageStatus = 'unplanned' | 'planned'
 
