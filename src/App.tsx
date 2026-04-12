@@ -23,6 +23,7 @@ import {
 import { AlertBar } from '@/components/AlertBar'
 import { Header } from '@/components/Header'
 import { RegionalImpactBoard } from '@/components/RegionalImpactBoard'
+import { RisingRivers } from '@/components/RisingRivers'
 import { RegionsPanel } from '@/components/RegionsPanel'
 import { NewsTicker } from '@/components/NewsTicker'
 import { CycloneMap } from '@/components/CycloneMap'
@@ -233,6 +234,8 @@ function App() {
         </div>
 
         <RegionalImpactBoard />
+
+        <RisingRivers onOpenRivers={() => switchTab('rivers')} />
 
         {/* Tabs row — sidebar on desktop, content area */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
